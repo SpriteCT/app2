@@ -9,13 +9,12 @@ import { mockProjects } from '../data/mockProjects'
 const ReportsPage = ({ selectedClient }) => {
   const [reportType, setReportType] = useState('weekly')
   const [showReportModal, setShowReportModal] = useState(false)
-  const [reportClient, setReportClient] = useState('client-all')
 
   // Statistics calculations
   const vulnerabilitiesData = useMemo(() => {
-    const filtered = reportClient === 'client-all' 
+    const filtered = selectedClient === 'client-all' 
       ? mockVulnerabilities 
-      : mockVulnerabilities.filter(v => v.client === reportClient)
+      : mockVulnerabilities.filter(v => v.client === selectedClient)
     
     const data = [
       { name: 'Critical', value: filtered.filter(v => v.criticality === 'Critical').length, color: '#dc2626' },
@@ -24,12 +23,12 @@ const ReportsPage = ({ selectedClient }) => {
       { name: 'Low', value: filtered.filter(v => v.criticality === 'Low').length, color: '#2563eb' },
     ]
     return data
-  }, [reportClient])
+  }, [selectedClient])
 
   const ticketsByPriority = useMemo(() => {
-    const filtered = reportClient === 'client-all' 
+    const filtered = selectedClient === 'client-all' 
       ? mockTickets 
-      : mockTickets.filter(t => t.client === reportClient)
+      : mockTickets.filter(t => t.client === selectedClient)
     
     return [
       { name: 'Critical', value: filtered.filter(t => t.priority === 'Critical').length },
@@ -37,12 +36,12 @@ const ReportsPage = ({ selectedClient }) => {
       { name: 'Medium', value: filtered.filter(t => t.priority === 'Medium').length },
       { name: 'Low', value: filtered.filter(t => t.priority === 'Low').length },
     ]
-  }, [reportClient])
+  }, [selectedClient])
 
   const ticketsByStatus = useMemo(() => {
-    const filtered = reportClient === 'client-all' 
+    const filtered = selectedClient === 'client-all' 
       ? mockTickets 
-      : mockTickets.filter(t => t.client === reportClient)
+      : mockTickets.filter(t => t.client === selectedClient)
     
     return [
       { name: 'Open', value: filtered.filter(t => t.status === 'Open').length, color: '#9333ea' },
@@ -50,7 +49,7 @@ const ReportsPage = ({ selectedClient }) => {
       { name: 'Fixed', value: filtered.filter(t => t.status === 'Fixed').length, color: '#16a34a' },
       { name: 'Verified', value: filtered.filter(t => t.status === 'Verified').length, color: '#0891b2' },
     ]
-  }, [reportClient])
+  }, [selectedClient])
 
   const assetsByStatus = useMemo(() => {
     return [
@@ -58,7 +57,7 @@ const ReportsPage = ({ selectedClient }) => {
       { name: 'Недоступен', value: mockAssets.filter(a => a.status === 'Недоступен').length },
       { name: 'Выведен из эксп.', value: mockAssets.filter(a => a.status === 'Выведен из эксплуатации').length },
     ]
-  }, [])
+  }, [selectedClient])
 
   const vulnerabilityTrend = useMemo(() => {
     return [
@@ -95,26 +94,6 @@ const ReportsPage = ({ selectedClient }) => {
               <Download className="w-4 h-4" />
               Экспорт данных
             </button>
-          </div>
-        </div>
-
-        {/* Client Filter */}
-        <div className="bg-dark-surface border border-dark-border rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-4">
-            <label className="text-sm text-gray-400">Клиент:</label>
-            <select
-              value={reportClient}
-              onChange={(e) => setReportClient(e.target.value)}
-              className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-            >
-              <option value="client-all">Все клиенты</option>
-              <option value="client-a">ТехноСервис</option>
-              <option value="client-b">ФинансХост</option>
-              <option value="client-c">МедиаДиджитал</option>
-              <option value="client-d">Козлов</option>
-              <option value="client-e">РозницаПро</option>
-              <option value="client-f">ВолковГрупп</option>
-            </select>
           </div>
         </div>
 

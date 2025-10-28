@@ -7,7 +7,8 @@ export const mockClients = [
     isDefault: true,
   },
   {
-    id: 'client-a',
+    id: '1',
+    code: 'TSV',
     name: 'ООО "ТехноСервис"',
     shortName: 'ТехноСервис',
     contactPerson: 'Иванов Иван Иванович',
@@ -34,7 +35,8 @@ export const mockClients = [
     notes: 'Крупный IT-интегратор с критической инфраструктурой. Требует постоянного мониторинга.',
   },
   {
-    id: 'client-b',
+    id: '2',
+    code: 'FNH',
     name: 'АО "ФинансХост"',
     shortName: 'ФинансХост',
     contactPerson: 'Петров Петр Петрович',
@@ -61,7 +63,8 @@ export const mockClients = [
     notes: 'Финансовая организация. Особое внимание к комплаенсу и безопасности данных.',
   },
   {
-    id: 'client-c',
+    id: '3',
+    code: 'MDD',
     name: 'ООО "МедиаДиджитал"',
     shortName: 'МедиаДиджитал',
     contactPerson: 'Сидоров С.С.',
@@ -72,7 +75,8 @@ export const mockClients = [
     contractNumber: 'MD-2024-008',
   },
   {
-    id: 'client-d',
+    id: '4',
+    code: 'KZL',
     name: 'ИП Козлов К.К.',
     shortName: 'Козлов',
     contactPerson: 'Козлов К.К.',
@@ -83,7 +87,8 @@ export const mockClients = [
     contractNumber: 'KZ-2024-003',
   },
   {
-    id: 'client-e',
+    id: '5',
+    code: 'RZP',
     name: 'ООО "РозницаПро"',
     shortName: 'РозницаПро',
     contactPerson: 'Морозов М.М.',
@@ -94,7 +99,8 @@ export const mockClients = [
     contractNumber: 'RT-2024-022',
   },
   {
-    id: 'client-f',
+    id: '6',
+    code: 'VGP',
     name: 'ЗАО "ВолковГрупп"',
     shortName: 'ВолковГрупп',
     contactPerson: 'Волков В.В.',

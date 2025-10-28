@@ -70,28 +70,65 @@
 
 ## Установка и запуск
 
-### Требования
+### Frontend
+
+#### Требования
 - Node.js 18+
 - npm или yarn
 
-### Установка зависимостей
+#### Установка зависимостей
 ```bash
 npm install
 ```
 
-### Запуск в режиме разработки
+#### Запуск в режиме разработки
 ```bash
 npm run dev
 ```
 
 Приложение будет доступно по адресу: http://localhost:5173
 
-### Сборка для продакшена
+#### Сборка для продакшена
 ```bash
 npm run build
 ```
 
 Собранные файлы будут в директории `dist/`
+
+### Backend
+
+#### Требования
+- Python 3.9+
+- pip
+
+#### Установка зависимостей
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # На Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+#### Запуск сервера
+```bash
+uvicorn main:app --reload
+```
+
+API будет доступно по адресу: http://localhost:8000
+
+API документация: http://localhost:8000/docs
+
+Подробная документация backend: [backend/README.md](backend/README.md)
+
+### API Endpoints
+
+- **Клиенты**: `/api/clients`
+- **Уязвимости**: `/api/vulnerabilities`
+- **Тикеты**: `/api/tickets`
+- **Активы**: `/api/assets`
+- **Отчёты**: `/api/reports`
+
+Полная документация: [backend/API_ENDPOINTS.md](backend/API_ENDPOINTS.md)
 
 ## Технологии
 
@@ -105,7 +142,7 @@ npm run build
 
 ```
 app2/
-├── src/
+├── src/                           # Frontend (React + Vite)
 │   ├── pages/
 │   │   ├── VulnerabilitiesPage.jsx  # Страница уязвимостей
 │   │   ├── TicketsPage.jsx         # Страница тикетов
@@ -121,6 +158,19 @@ app2/
 │   ├── App.jsx                      # Главный компонент с навигацией
 │   ├── main.jsx
 │   └── index.css
+├── backend/                        # Backend (FastAPI)
+│   ├── app/
+│   │   ├── routers/                 # API эндпоинты
+│   │   │   ├── clients.py
+│   │   │   ├── vulnerabilities.py
+│   │   │   ├── tickets.py
+│   │   │   ├── assets.py
+│   │   │   └── reports.py
+│   │   └── data/
+│   │       └── mock_data.py
+│   ├── main.py                      # Точка входа
+│   ├── requirements.txt
+│   └── README.md
 ├── public/
 ├── index.html
 ├── vite.config.js
@@ -134,7 +184,8 @@ app2/
 ✅ Реестр уязвимостей (импорт из сканеров, ручное добавление)  
 ✅ Управление тикетами (автоматическое создание, назначение ответственных, встроенный чат)  
 ✅ Управление клиентами и проектами (карточки клиентов, контакты, SLA, договоры, инфраструктура, управление проектами)  
-✅ **Отчётность и аналитика** (дашборды с графиками, KPI специалистов, формирование отчётов, автогенерация)
+✅ Отчётность и аналитика (дашборды с графиками, формирование отчётов, автогенерация)  
+✅ **Backend API на FastAPI** (5 роутеров, RESTful API, фильтрация, поиск, статистика)
 
 ## Цветовая схема
 
