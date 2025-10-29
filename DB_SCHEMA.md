@@ -1,0 +1,151 @@
+# Database Schema (Normalized)
+
+Goal: 3NF-ish normalization, no multi-valued fields embedded, no denormalized duplicates, junction tables for many-to-many.
+
+Field types are illustrative. Use UUIDs (string) or database-native IDs as preferred. Add created_at/updated_at fields where needed.
+
+## Core Tables
+
+clients
+- id (pk)
+- name (text)
+- short_name (text, 3–4 uppercase letters, e.g., NSV)  // CHECK ^[A-Z]{3,4}$
+- industry (text)
+- contact_person (text)
+- position (text)
+- phone (text)
+- email (text)
+- sla (enum: Premium|Standard|Basic)
+- security_level (enum: Critical|High)
+- contract_number (text)
+- contract_date (date)
+- contract_expiry (date)
+- billing_cycle (enum: Monthly|Quarterly|Yearly)
+- infra_cloud (boolean)            // cloudServices
+- infra_on_prem (boolean)         // onPremise
+- notes (text)
+- is_default (boolean)            // optional
+
+client_additional_contacts
+- id (pk)
+- client_id (fk -> clients.id on delete cascade)
+- name (text)
+- role (text)
+- phone (text)
+- email (text)
+
+projects
+- id (pk)
+- client_id (fk -> clients.id on delete cascade)
+- name (text)
+- description (text)
+- type (enum: Vulnerability Scanning|Penetration Test|Network Scanning|BAS|Web Application Scanning|Compliance Check)
+- status (enum: Active|Planning|On Hold|Completed|Cancelled)
+- priority (enum: Critical|High|Medium|Low)
+- start_date (date)
+- end_date (date)
+- budget (numeric)
+- progress (smallint) // 0..100
+
+project_deliverables
+- id (pk)
+- project_id (fk -> projects.id on delete cascade)
+- title (text)
+
+project_team_members
+- id (pk)
+- project_id (fk -> projects.id on delete cascade)
+- name (text) // if users table appears, replace with user_id
+
+assets
+- id (pk)
+- client_id (fk -> clients.id on delete restrict)
+- project_id (fk -> projects.id on delete set null)
+- name (text)
+- type (text) // or enum of asset types
+- ip_address (text)
+- operating_system (text)
+- department (text)
+- owner (text)
+- status (enum: В эксплуатации|Недоступен|В обслуживании|Выведен из эксплуатации)
+- criticality (enum: Critical|High|Medium|Low)
+- last_scan (timestamptz)
+
+vulnerabilities
+- id (pk)
+- client_id (fk -> clients.id on delete restrict)
+- project_id (fk -> projects.id on delete set null)
+- asset_id (fk -> assets.id on delete set null)
+- title (text)
+- description (text)
+- asset_type (text)    // denorm for convenience; optional
+- scanner (text)
+- status (enum: Open|In Progress|Fixed|Verified)
+- criticality (enum: Critical|High|Medium|Low)
+- cvss (numeric)
+- discovered (date)
+- last_modified (date)
+- assignee (text)      // if users table appears, replace with user_id
+
+vulnerability_tags
+- vulnerability_id (fk -> vulnerabilities.id on delete cascade)
+- tag (text)
+- pk: (vulnerability_id, tag)
+
+tickets
+- id (pk)
+- client_id (fk -> clients.id on delete restrict)
+- project_id (fk -> projects.id on delete set null)
+- title (text)
+- description (text)
+- assignee (text)
+- reporter (text)
+- priority (enum: Critical|High|Medium|Low)
+- status (enum: Open|In Progress|Fixed|Verified|Closed)
+- created_at (timestamptz)
+- due_date (date)
+- resolution (text nullable)
+
+ticket_messages
+- id (pk)
+- ticket_id (fk -> tickets.id on delete cascade)
+- author (text)
+- timestamp (timestamptz)
+- message (text)
+
+ticket_vulnerabilities   // junction: Ticket N..N Vulnerability
+- ticket_id (fk -> tickets.id on delete cascade)
+- vulnerability_id (fk -> vulnerabilities.id on delete cascade)
+- pk: (ticket_id, vulnerability_id)
+
+gantt // one per project (optional record)
+- project_id (pk, fk -> projects.id on delete cascade)
+
+gantt_tasks
+- id (pk)
+- project_id (fk -> projects.id on delete cascade)
+- name (text)
+- start_date (date)
+- end_date (date)
+
+## Normalization Notes
+- Arrays/lists moved into separate tables: client_additional_contacts, project_deliverables, project_team_members, ticket_messages, ticket_vulnerabilities, vulnerability_tags, gantt_tasks.
+- Removed denormalized project.clientName; obtain via join with clients.
+- Infrastructure numeric counts are not stored on clients; compute via `assets` aggregates.
+- All many-to-many represented via junctions; all one-to-many via foreign keys with appropriate on-delete actions.
+
+## Indexing (recommended)
+- projects(client_id), assets(client_id), vulnerabilities(client_id), tickets(client_id)
+- assets(project_id), vulnerabilities(project_id), tickets(project_id)
+- ticket_vulnerabilities(ticket_id), ticket_vulnerabilities(vulnerability_id)
+- vulnerability_tags(vulnerability_id), vulnerability_tags(tag)
+- tickets(status, priority), vulnerabilities(status, criticality)
+
+## Constraints
+- CHECK (projects.start_date <= projects.end_date)
+- CHECK (gantt_tasks.start_date >= projects.start_date AND gantt_tasks.end_date <= projects.end_date) via trigger or generated constraint
+- CHECK (tickets.due_date IS NULL OR tickets.due_date >= tickets.created_at::date)
+
+## Migration Guidance
+- If starting from mock data: map arrays to the new join tables; replace any embedded names with ids (e.g., vulnerabilities.asset -> asset_id, tickets.client -> client_id).
+

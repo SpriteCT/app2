@@ -11,6 +11,7 @@ import {
 } from '../data/mockAssets'
 import { mockVulnerabilities } from '../data/mockVulnerabilities'
 import { mockTickets } from '../data/mockTickets'
+import { mockClients } from '../data/mockClients'
 
 const AssetsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -20,9 +21,12 @@ const AssetsPage = ({ selectedClient }) => {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [assets, setAssets] = useState(mockAssets)
+  const [showEditAssetModal, setShowEditAssetModal] = useState(false)
+  const [editAsset, setEditAsset] = useState(null)
 
   const filteredAssets = useMemo(() => {
-    return mockAssets.filter(a => {
+    return assets.filter(a => {
       const matchesSearch = a.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           a.ipAddress.toLowerCase().includes(searchTerm.toLowerCase())
@@ -38,7 +42,7 @@ const AssetsPage = ({ selectedClient }) => {
 
       return matchesSearch && matchesType && matchesStatus && matchesCriticality && matchesClient
     })
-  }, [searchTerm, selectedType, selectedStatus, selectedCriticality, selectedClient])
+  }, [searchTerm, selectedType, selectedStatus, selectedCriticality, selectedClient, assets])
 
   const getVulnerabilitiesForAsset = (asset) => {
     return mockVulnerabilities.filter(v => asset.vulnerabilities.includes(v.id))
@@ -243,6 +247,7 @@ const AssetsPage = ({ selectedClient }) => {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => { setEditAsset({ ...asset }); setShowEditAssetModal(true) }}
                         className="p-2 text-gray-400 hover:text-white hover:bg-dark-card rounded transition-colors"
                         title="Редактировать"
                       >
@@ -265,7 +270,7 @@ const AssetsPage = ({ selectedClient }) => {
 
       {/* Results count */}
       <div className="mt-4 text-sm text-gray-400">
-        Найдено: {filteredAssets.length} из {mockAssets.length}
+        Найдено: {filteredAssets.length} из {assets.length}
       </div>
 
       {/* Asset Detail Modal */}
@@ -323,18 +328,12 @@ const AssetsPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400">ОС</label>
                   <div className="mt-1 text-white">{selectedAsset.operatingSystem}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-400">Проект</label>
-                  <div className="mt-1 text-white">{selectedAsset.project}</div>
-                </div>
+                {/* Project removed by schema alignment */}
                 <div>
                   <label className="text-sm text-gray-400">Владелец</label>
                   <div className="mt-1 text-white">{selectedAsset.owner}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-400">Подразделение</label>
-                  <div className="mt-1 text-white">{selectedAsset.department}</div>
-                </div>
+                {/* Department removed by schema alignment */}
                 <div>
                   <label className="text-sm text-gray-400">Последнее сканирование</label>
                   <div className="mt-1 text-white">{selectedAsset.lastScan}</div>
@@ -477,12 +476,12 @@ const AssetsPage = ({ selectedClient }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Владелец</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="Клиент A"
-                  />
+                  <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
+                  <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    {mockClients.filter(c => !c.isDefault).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -495,14 +494,7 @@ const AssetsPage = ({ selectedClient }) => {
                     placeholder="Проект X"
                   />
                 </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Подразделение</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="IT Infrastructure"
-                  />
-                </div>
+                {/* Department removed by schema alignment */}
               </div>
 
               <div className="flex justify-end gap-3">
@@ -518,6 +510,72 @@ const AssetsPage = ({ selectedClient }) => {
                 >
                   Добавить актив
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Asset Modal */}
+      {showEditAssetModal && editAsset && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
+            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Редактировать актив</h2>
+              <button onClick={() => setShowEditAssetModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Имя актива</label>
+                <input type="text" value={editAsset.name} onChange={(e) => setEditAsset({ ...editAsset, name: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Тип</label>
+                  <select value={editAsset.type} onChange={(e) => setEditAsset({ ...editAsset, type: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    {assetTypes.filter(t => t !== 'All').map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">IP Адрес</label>
+                  <input type="text" value={editAsset.ipAddress} onChange={(e) => setEditAsset({ ...editAsset, ipAddress: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
+                  <select value={editAsset.criticality} onChange={(e) => setEditAsset({ ...editAsset, criticality: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+                  <select value={editAsset.status} onChange={(e) => setEditAsset({ ...editAsset, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>В эксплуатации</option>
+                    <option>Недоступен</option>
+                    <option>В обслуживании</option>
+                    <option>Выведен из эксплуатации</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">ОС</label>
+                  <input type="text" value={editAsset.operatingSystem} onChange={(e) => setEditAsset({ ...editAsset, operatingSystem: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Подразделение</label>
+                  <input type="text" value={editAsset.department} onChange={(e) => setEditAsset({ ...editAsset, department: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowEditAssetModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
+                <button onClick={() => { setAssets(prev => prev.map(a => a.id === editAsset.id ? { ...a, ...editAsset } : a)); setShowEditAssetModal(false) }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
               </div>
             </div>
           </div>

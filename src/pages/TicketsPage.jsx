@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react'
-import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Ticket, MessageCircle, Clock, User, Shield, Server } from 'lucide-react'
+import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Ticket, MessageCircle, Clock, User, Shield, Server, Info } from 'lucide-react'
 import { mockTickets, priorityColors, statusColorsTickets } from '../data/mockTickets'
 import { mockVulnerabilities } from '../data/mockVulnerabilities'
+import { mockClients } from '../data/mockClients'
 
 const TicketsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -14,9 +15,15 @@ const TicketsPage = ({ selectedClient }) => {
   const [vulnFilterCriticality, setVulnFilterCriticality] = useState('All')
   const [vulnFilterStatus, setVulnFilterStatus] = useState('All')
   const [selectedVulns, setSelectedVulns] = useState([])
+  const [tickets, setTickets] = useState(mockTickets)
+  const [showEditTicketModal, setShowEditTicketModal] = useState(false)
+  const [editTicket, setEditTicket] = useState(null)
+  const [autoTitle, setAutoTitle] = useState('')
+  const [createPriority, setCreatePriority] = useState('High')
+  const [createDescription, setCreateDescription] = useState('')
 
   const filteredTickets = useMemo(() => {
-    return mockTickets.filter(t => {
+    return tickets.filter(t => {
       const matchesSearch = t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           t.client.toLowerCase().includes(searchTerm.toLowerCase())
@@ -26,13 +33,13 @@ const TicketsPage = ({ selectedClient }) => {
 
       return matchesSearch && matchesPriority && matchesStatus && matchesClient
     })
-  }, [searchTerm, selectedPriority, selectedStatus, selectedClient])
+  }, [searchTerm, selectedPriority, selectedStatus, selectedClient, tickets])
 
   const priorityCounts = useMemo(() => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
     const filtered = selectedClient === 'client-all' 
-      ? mockTickets 
-      : mockTickets.filter(t => t.client === selectedClient)
+      ? tickets 
+      : tickets.filter(t => t.client === selectedClient)
     filtered.forEach(t => {
       if (counts.hasOwnProperty(t.priority)) {
         counts[t.priority]++
@@ -44,8 +51,8 @@ const TicketsPage = ({ selectedClient }) => {
   const statusCounts = useMemo(() => {
     const counts = { Open: 0, 'In Progress': 0, Fixed: 0, Verified: 0 }
     const filtered = selectedClient === 'client-all' 
-      ? mockTickets 
-      : mockTickets.filter(t => t.client === selectedClient)
+      ? tickets 
+      : tickets.filter(t => t.client === selectedClient)
     filtered.forEach(t => {
       if (counts.hasOwnProperty(t.status)) {
         counts[t.status]++
@@ -57,6 +64,7 @@ const TicketsPage = ({ selectedClient }) => {
   const getVulnerabilitiesForTicket = (ticket) => {
     return mockVulnerabilities.filter(v => ticket.vulnerabilities.includes(v.id))
   }
+  const [viewVuln, setViewVuln] = useState(null)
 
   const handleSendMessage = (ticketId) => {
     if (!newMessage.trim()) return
@@ -80,6 +88,24 @@ const TicketsPage = ({ selectedClient }) => {
     return diffDays
   }
 
+  // Определяем допустимого клиента для создаваемого тикета:
+  // - если в фильтре выбран конкретный клиент, используем его
+  // - иначе берём клиента из первой выбранной уязвимости
+  const allowedClientForTicket = useMemo(() => {
+    if (selectedClient && selectedClient !== 'client-all') return selectedClient
+    if (selectedVulns.length > 0) {
+      const first = mockVulnerabilities.find(v => v.id === selectedVulns[0])
+      return first ? first.client : null
+    }
+    return null
+  }, [selectedClient, selectedVulns])
+
+  const allowedClientName = useMemo(() => {
+    const client = mockClients.find(c => c.id === allowedClientForTicket)
+    if (!client) return ''
+    return client.name
+  }, [allowedClientForTicket])
+
   const filteredVulnerabilitiesForTicket = useMemo(() => {
     return mockVulnerabilities.filter(v => {
       const matchesSearch = v.id.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
@@ -87,17 +113,43 @@ const TicketsPage = ({ selectedClient }) => {
                           v.asset.toLowerCase().includes(vulnSearchTerm.toLowerCase())
       const matchesCriticality = vulnFilterCriticality === 'All' || v.criticality === vulnFilterCriticality
       const matchesStatus = vulnFilterStatus === 'All' || v.status === vulnFilterStatus
-      
-      return matchesSearch && matchesCriticality && matchesStatus
+      const matchesClientScope = allowedClientForTicket
+        ? v.client === allowedClientForTicket
+        : true
+      return matchesSearch && matchesCriticality && matchesStatus && matchesClientScope
     })
-  }, [vulnSearchTerm, vulnFilterCriticality, vulnFilterStatus])
+  }, [vulnSearchTerm, vulnFilterCriticality, vulnFilterStatus, allowedClientForTicket])
+
+  // Автогенерация названия тикета от клиента
+  const recomputeAutoTitle = () => {
+    if (allowedClientName) {
+      setAutoTitle(`Тикет для клиента: ${allowedClientName}`)
+    } else {
+      setAutoTitle('')
+    }
+  }
+
+  React.useEffect(() => {
+    recomputeAutoTitle()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedClientName])
 
   const handleVulnToggle = (vulnId) => {
-    setSelectedVulns(prev => 
-      prev.includes(vulnId) 
+    const vuln = mockVulnerabilities.find(v => v.id === vulnId)
+    if (!vuln) return
+    // Если уже определён допустимый клиент, не позволяем выбирать уязвимости другого клиента
+    if (allowedClientForTicket && vuln.client !== allowedClientForTicket) {
+      return
+    }
+    setSelectedVulns(prev => (
+      prev.includes(vulnId)
         ? prev.filter(id => id !== vulnId)
         : [...prev, vulnId]
-    )
+    ))
+  }
+
+  const isVulnDisabled = (v) => {
+    return Boolean(allowedClientForTicket && v.client !== allowedClientForTicket)
   }
 
   return (
@@ -312,6 +364,7 @@ const TicketsPage = ({ selectedClient }) => {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => { setEditTicket({ ...ticket }); setShowEditTicketModal(true) }}
                           className="p-2 text-gray-400 hover:text-white hover:bg-dark-card rounded transition-colors"
                           title="Редактировать"
                         >
@@ -335,7 +388,7 @@ const TicketsPage = ({ selectedClient }) => {
 
       {/* Results count */}
       <div className="mt-4 text-sm text-gray-400">
-        Найдено: {filteredTickets.length} из {mockTickets.length}
+        Найдено: {filteredTickets.length} из {tickets.length}
       </div>
 
       {/* Ticket Detail Modal */}
@@ -429,8 +482,8 @@ const TicketsPage = ({ selectedClient }) => {
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Связанные уязвимости</label>
                 <div className="space-y-2">
-                  {getVulnerabilitiesForTicket(selectedTicket).map((vuln) => (
-                    <div key={vuln.id} className="bg-dark-card border border-dark-border rounded p-3">
+                      {getVulnerabilitiesForTicket(selectedTicket).map((vuln) => (
+                    <div key={vuln.id} className="bg-dark-card border border-dark-border rounded p-3 hover:bg-dark-card/80 cursor-pointer" onClick={() => setViewVuln(vuln)}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-sm text-white font-medium">{vuln.id}</div>
@@ -508,6 +561,56 @@ const TicketsPage = ({ selectedClient }) => {
         </div>
       )}
 
+      {/* View Vulnerability from Ticket */}
+      {viewVuln && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="w-6 h-6 text-yellow-400" />
+                <div>
+                  <h2 className="text-xl font-bold text-white">{viewVuln.id}</h2>
+                  <p className="text-sm text-gray-400">{viewVuln.title}</p>
+                </div>
+              </div>
+              <button onClick={() => setViewVuln(null)} className="text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400">Актив</label>
+                  <div className="mt-1 text-white">{viewVuln.asset}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Тип актива</label>
+                  <div className="mt-1 text-white">{viewVuln.assetType}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Критичность</label>
+                  <div className="mt-1 text-white">{viewVuln.criticality}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Статус</label>
+                  <div className="mt-1 text-white">{viewVuln.status}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">CVSS</label>
+                  <div className="mt-1 text-white">{viewVuln.cvss}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Сканер</label>
+                  <div className="mt-1 text-white">{viewVuln.scanner}</div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400">Описание</label>
+                <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">{viewVuln.description}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Ticket Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -527,15 +630,25 @@ const TicketsPage = ({ selectedClient }) => {
                 <label className="text-sm text-gray-400 mb-2 block">Название</label>
                 <input
                   type="text"
+                  value={autoTitle}
+                  onChange={(e) => setAutoTitle(e.target.value)}
                   className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Введите название тикета"
+                  placeholder="Тикет для клиента"
                 />
+                <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Название автоматически формируется от клиента
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
-                  <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select
+                    value={createPriority}
+                    onChange={(e) => setCreatePriority(e.target.value)}
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                  >
                     <option>Critical</option>
                     <option>High</option>
                     <option>Medium</option>
@@ -546,8 +659,10 @@ const TicketsPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="Клиент"
+                    value={allowedClientName}
+                    disabled
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg opacity-70 cursor-not-allowed"
+                    placeholder="Определится по выбору уязвимостей или фильтру клиента"
                   />
                 </div>
               </div>
@@ -603,7 +718,7 @@ const TicketsPage = ({ selectedClient }) => {
                     filteredVulnerabilitiesForTicket.map((vuln) => (
                       <label 
                         key={vuln.id} 
-                        className={`flex items-start gap-3 cursor-pointer hover:bg-dark-border p-3 rounded border transition-colors ${
+                        className={`flex items-start gap-3 ${isVulnDisabled(vuln) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-dark-border'} p-3 rounded border transition-colors ${
                           selectedVulns.includes(vuln.id) ? 'border-dark-purple-primary bg-dark-purple-primary/10' : 'border-transparent'
                         }`}
                       >
@@ -611,6 +726,7 @@ const TicketsPage = ({ selectedClient }) => {
                           type="checkbox" 
                           checked={selectedVulns.includes(vuln.id)}
                           onChange={() => handleVulnToggle(vuln.id)}
+                          disabled={isVulnDisabled(vuln)}
                           className="mt-0.5 accent-dark-purple-primary" 
                         />
                         <div className="flex-1">
@@ -635,6 +751,7 @@ const TicketsPage = ({ selectedClient }) => {
                           </div>
                           <div className="text-xs text-gray-300 mb-1">{vuln.title}</div>
                           <div className="text-xs text-gray-400">Актив: {vuln.asset}</div>
+                          <div className="text-[10px] text-gray-500 mt-1">Клиент: {vuln.client}</div>
                         </div>
                       </label>
                     ))
@@ -646,6 +763,8 @@ const TicketsPage = ({ selectedClient }) => {
                 <label className="text-sm text-gray-400 mb-2 block">Описание</label>
                 <textarea
                   rows="4"
+                  value={createDescription}
+                  onChange={(e) => setCreateDescription(e.target.value)}
                   className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
                   placeholder="Опишите проблему..."
                 />
@@ -660,10 +779,68 @@ const TicketsPage = ({ selectedClient }) => {
                 </button>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={!allowedClientForTicket || selectedVulns.length === 0}
                 >
                   Создать тикет
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Ticket Modal */}
+      {showEditTicketModal && editTicket && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
+            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Редактировать тикет</h2>
+              <button onClick={() => setShowEditTicketModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Название</label>
+                <input type="text" value={editTicket.title} onChange={(e) => setEditTicket({ ...editTicket, title: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
+                  <select value={editTicket.priority} onChange={(e) => setEditTicket({ ...editTicket, priority: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+                  <select value={editTicket.status} onChange={(e) => setEditTicket({ ...editTicket, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Open</option>
+                    <option>In Progress</option>
+                    <option>Fixed</option>
+                    <option>Verified</option>
+                    <option>Closed</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
+                  <input type="text" value={editTicket.assignee} onChange={(e) => setEditTicket({ ...editTicket, assignee: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Срок</label>
+                  <input type="date" value={editTicket.dueDate} onChange={(e) => setEditTicket({ ...editTicket, dueDate: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
+                <textarea rows="4" value={editTicket.description} onChange={(e) => setEditTicket({ ...editTicket, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowEditTicketModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
+                <button onClick={() => { setTickets(prev => prev.map(t => t.id === editTicket.id ? { ...t, ...editTicket } : t)); setShowEditTicketModal(false) }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
               </div>
             </div>
           </div>

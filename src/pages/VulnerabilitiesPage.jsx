@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Search, Filter, Plus, Download, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import { mockVulnerabilities, criticalityColors, statusColors } from '../data/mockVulnerabilities'
+import { mockAssets } from '../data/mockAssets'
 
 const VulnerabilitiesPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -9,9 +10,30 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
   const [selectedVulnerability, setSelectedVulnerability] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editVuln, setEditVuln] = useState(null)
+  const [vulns, setVulns] = useState(mockVulnerabilities)
+  const [assetSearch, setAssetSearch] = useState('')
+  const [createClientId, setCreateClientId] = useState('')
+  const filteredAssets = useMemo(() => {
+    const term = assetSearch.toLowerCase()
+    const ownerByClient = (id) => (
+      id === '1' ? 'Клиент A' :
+      id === '2' ? 'Клиент B' :
+      id === '3' ? 'Клиент C' :
+      id === '4' ? 'Клиент D' :
+      id === '5' ? 'Клиент E' :
+      id === '6' ? 'Клиент F' : null
+    )
+    return mockAssets.filter(a => {
+      const matchesTerm = a.name.toLowerCase().includes(term)
+      const matchesClient = createClientId ? (a.owner === ownerByClient(createClientId)) : true
+      return matchesTerm && matchesClient
+    })
+  }, [assetSearch, createClientId])
 
   const filteredVulnerabilities = useMemo(() => {
-    return mockVulnerabilities.filter(v => {
+    return vulns.filter(v => {
       const matchesSearch = v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           v.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           v.asset.toLowerCase().includes(searchTerm.toLowerCase())
@@ -21,7 +43,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
 
       return matchesSearch && matchesCriticality && matchesStatus && matchesClient
     })
-  }, [searchTerm, selectedCriticality, selectedStatus, selectedClient])
+  }, [searchTerm, selectedCriticality, selectedStatus, selectedClient, vulns])
 
   const criticalityCounts = useMemo(() => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
@@ -224,6 +246,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => { setEditVuln({ ...v }); setShowEditModal(true) }}
                         className="p-2 text-gray-400 hover:text-white hover:bg-dark-card rounded transition-colors"
                         title="Редактировать"
                       >
@@ -379,11 +402,14 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Актив</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="server.example.com"
-                  />
+                  <div className="space-y-2">
+                    <input type="text" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} placeholder="Поиск по активу..." className="w-full px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
+                    <select className="w-full px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
+                      {filteredAssets.map(a => (
+                        <option key={a.id} value={a.name}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип актива</label>
@@ -397,6 +423,19 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
+                <select value={createClientId} onChange={(e) => setCreateClientId(e.target.value)} className="w-full px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
+                  <option value="">— выберите клиента —</option>
+                  <option value="1">ООО "ТехноСервис"</option>
+                  <option value="2">АО "ФинансХост"</option>
+                  <option value="3">ООО "МедиаДиджитал"</option>
+                  <option value="4">ИП Козлов К.К.</option>
+                  <option value="5">ООО "РозницаПро"</option>
+                  <option value="6">ЗАО "ВолковГрупп"</option>
+                </select>
+              </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -463,6 +502,89 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 >
                   Добавить уязвимость
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Vulnerability Modal */}
+      {showEditModal && editVuln && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
+            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Редактировать уязвимость</h2>
+              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Название</label>
+                <input type="text" value={editVuln.title} onChange={(e) => setEditVuln({ ...editVuln, title: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Актив</label>
+                  <input type="text" value={editVuln.asset} onChange={(e) => setEditVuln({ ...editVuln, asset: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Тип актива</label>
+                  <input type="text" value={editVuln.assetType} onChange={(e) => setEditVuln({ ...editVuln, assetType: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
+                  <select value={editVuln.criticality} onChange={(e) => setEditVuln({ ...editVuln, criticality: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">CVSS</label>
+                  <input type="number" min="0" max="10" step="0.1" value={editVuln.cvss} onChange={(e) => setEditVuln({ ...editVuln, cvss: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+                  <select value={editVuln.status} onChange={(e) => setEditVuln({ ...editVuln, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Open</option>
+                    <option>In Progress</option>
+                    <option>Fixed</option>
+                    <option>Verified</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Сканер</label>
+                  <input type="text" value={editVuln.scanner} onChange={(e) => setEditVuln({ ...editVuln, scanner: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Обнаружена</label>
+                  <input type="date" value={editVuln.discovered} onChange={(e) => setEditVuln({ ...editVuln, discovered: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Изменена</label>
+                  <input type="date" value={editVuln.lastModified} onChange={(e) => setEditVuln({ ...editVuln, lastModified: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
+                <input type="text" value={editVuln.assignee} onChange={(e) => setEditVuln({ ...editVuln, assignee: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
+                <textarea rows="4" value={editVuln.description} onChange={(e) => setEditVuln({ ...editVuln, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
+                <button onClick={() => {
+                  setVulns(prev => prev.map(x => x.id === editVuln.id ? { ...x, ...editVuln } : x))
+                  setShowEditModal(false)
+                }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
               </div>
             </div>
           </div>

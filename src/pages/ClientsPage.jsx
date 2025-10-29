@@ -5,9 +5,21 @@ import { mockProjects, projectTypeColors, projectStatusColors, priorityColorsPro
 
 const ClientsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
+  const [clients, setClients] = useState(mockClients)
+  const [projects, setProjects] = useState(mockProjects)
   const [selectedClient, setSelectedClient] = useState(null)
   const [showClientModal, setShowClientModal] = useState(false)
   const [showProjectModal, setShowProjectModal] = useState(false)
+  const [showProjectsListModal, setShowProjectsListModal] = useState(false)
+  const [projectsForClient, setProjectsForClient] = useState(null)
+  const [selectedProject, setSelectedProject] = useState(null)
+  const [showGanttModal, setShowGanttModal] = useState(false)
+  const [ganttDraftTasks, setGanttDraftTasks] = useState([])
+  const [savedGanttByProject, setSavedGanttByProject] = useState({})
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false)
+  const [editProject, setEditProject] = useState(null)
+  const [showEditClientModal, setShowEditClientModal] = useState(false)
+  const [editClient, setEditClient] = useState(null)
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'Vulnerability Scanning',
@@ -18,19 +30,38 @@ const ClientsPage = () => {
     budget: '',
     team: [],
   })
+  const [newClient, setNewClient] = useState({
+    id: String(Date.now()),
+    name: '',
+    shortName: '',
+    industry: '',
+    contactPerson: '',
+    position: '',
+    phone: '',
+    email: '',
+    sla: 'Standard',
+    securityLevel: 'High',
+    contractNumber: '',
+    contractDate: '',
+    contractExpiry: '',
+    billingCycle: 'Monthly',
+    infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true },
+    notes: '',
+    isDefault: false,
+  })
 
   const filteredClients = useMemo(() => {
-    return mockClients.filter(c => 
+    return clients.filter(c => 
       !c.isDefault && (
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.industry.toLowerCase().includes(searchTerm.toLowerCase())
       )
     )
-  }, [searchTerm])
+  }, [searchTerm, clients])
 
   const getProjectsForClient = (clientId) => {
-    return mockProjects.filter(p => p.clientId === clientId)
+    return projects.filter(p => p.clientId === clientId)
   }
 
   return (
@@ -113,7 +144,8 @@ const ClientsPage = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      setSelectedClient(client)
+                      setProjectsForClient(client)
+                      setShowProjectsListModal(true)
                     }}
                     className="text-xs text-dark-purple-primary hover:text-dark-purple-secondary"
                   >
@@ -152,12 +184,23 @@ const ClientsPage = () => {
                   <p className="text-sm text-gray-400">{selectedClient.industry}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedClient(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditClient({ ...selectedClient })
+                    setShowEditClientModal(true)
+                  }}
+                  className="px-3 py-1.5 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors text-sm flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" /> Редактировать
+                </button>
+                <button
+                  onClick={() => setSelectedClient(null)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             
             <div className="p-6 space-y-6">
@@ -254,31 +297,17 @@ const ClientsPage = () => {
                 </div>
               </div>
 
-              {/* Infrastructure */}
+              {/* Infrastructure (counts derived elsewhere; show deployment types only) */}
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <Server className="w-5 h-5" />
                   Инфраструктура
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-dark-card rounded p-3">
-                    <div className="text-sm text-gray-400 mb-1">Серверы</div>
-                    <div className="text-2xl font-bold text-white">{selectedClient.infrastructure.servers}</div>
-                  </div>
-                  <div className="bg-dark-card rounded p-3">
-                    <div className="text-sm text-gray-400 mb-1">Рабочие станции</div>
-                    <div className="text-2xl font-bold text-white">{selectedClient.infrastructure.desktops}</div>
-                  </div>
-                  <div className="bg-dark-card rounded p-3">
-                    <div className="text-sm text-gray-400 mb-1">Сетевое оборудование</div>
-                    <div className="text-2xl font-bold text-white">{selectedClient.infrastructure.networkDevices}</div>
-                  </div>
-                  <div className="bg-dark-card rounded p-3">
-                    <div className="text-sm text-gray-400 mb-1">Тип развертывания</div>
-                    <div className="text-xs text-white mt-2">
-                      {selectedClient.infrastructure.cloudServices && '☁️ Cloud '}
-                      {selectedClient.infrastructure.onPremise && '🏢 On-Premise'}
-                    </div>
+                <div className="bg-dark-card rounded p-4">
+                  <div className="text-sm text-gray-400 mb-1">Тип развертывания</div>
+                  <div className="text-xs text-white mt-2">
+                    {selectedClient.infrastructure.cloudServices && '☁️ Cloud '}
+                    {selectedClient.infrastructure.onPremise && '🏢 On-Premise'}
                   </div>
                 </div>
               </div>
@@ -292,6 +321,7 @@ const ClientsPage = () => {
                   </h3>
                   <button
                     onClick={() => {
+                      setProjectsForClient(selectedClient)
                       setShowProjectModal(true)
                       setSelectedClient(null)
                     }}
@@ -303,7 +333,11 @@ const ClientsPage = () => {
                 </div>
                 <div className="space-y-3">
                   {getProjectsForClient(selectedClient.id).map((project) => (
-                    <div key={project.id} className="bg-dark-card border border-dark-border rounded p-4 hover:bg-dark-card/80 transition-colors">
+                    <div
+                      key={project.id}
+                      className="bg-dark-card border border-dark-border rounded p-4 hover:bg-dark-card/80 transition-colors cursor-pointer"
+                      onClick={() => setSelectedProject(project)}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <div className="text-sm font-medium text-white">{project.name}</div>
@@ -358,7 +392,79 @@ const ClientsPage = () => {
         </div>
       )}
 
-      {/* Add Client Modal - placeholder */}
+      {/* Edit Client Modal */}
+      {showEditClientModal && editClient && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Редактировать клиента</h2>
+              <button onClick={() => setShowEditClientModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input type="text" value={editClient.name} onChange={(e) => setEditClient({ ...editClient, name: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Полное название" />
+                <input type="text" value={editClient.shortName} onChange={(e) => setEditClient({ ...editClient, shortName: e.target.value.toUpperCase().slice(0,4) })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Краткое имя" />
+                <input type="text" value={editClient.industry} onChange={(e) => setEditClient({ ...editClient, industry: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Отрасль" />
+                <select value={editClient.sla} onChange={(e) => setEditClient({ ...editClient, sla: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
+                  <option>Premium</option>
+                  <option>Standard</option>
+                  <option>Basic</option>
+                </select>
+                <select value={editClient.securityLevel} onChange={(e) => setEditClient({ ...editClient, securityLevel: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
+                  <option>Critical</option>
+                  <option>High</option>
+                </select>
+                <select value={editClient.billingCycle} onChange={(e) => setEditClient({ ...editClient, billingCycle: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
+                  <option>Monthly</option>
+                  <option>Quarterly</option>
+                  <option>Yearly</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <input type="text" value={editClient.contactPerson} onChange={(e) => setEditClient({ ...editClient, contactPerson: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Контактное лицо" />
+                <input type="text" value={editClient.position} onChange={(e) => setEditClient({ ...editClient, position: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Должность" />
+                <input type="text" value={editClient.phone} onChange={(e) => setEditClient({ ...editClient, phone: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Телефон" />
+                <input type="email" value={editClient.email} onChange={(e) => setEditClient({ ...editClient, email: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Email" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <input type="text" value={editClient.contractNumber} onChange={(e) => setEditClient({ ...editClient, contractNumber: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Договор №" />
+                <input type="date" value={editClient.contractDate} onChange={(e) => setEditClient({ ...editClient, contractDate: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" />
+                <input type="date" value={editClient.contractExpiry} onChange={(e) => setEditClient({ ...editClient, contractExpiry: e.target.value })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" />
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex items-center gap-3 text-sm text-white col-span-2 md:col-span-4">
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={!!editClient.infrastructure?.cloudServices} onChange={(e) => setEditClient({ ...editClient, infrastructure: { ...editClient.infrastructure, cloudServices: e.target.checked } })} /> Cloud</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={!!editClient.infrastructure?.onPremise} onChange={(e) => setEditClient({ ...editClient, infrastructure: { ...editClient.infrastructure, onPremise: e.target.checked } })} /> On-Prem</label>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Дополнительные контакты</label>
+                <ClientContactsEditor contacts={editClient.additionalContacts || []} onChange={(updated) => setEditClient({ ...editClient, additionalContacts: updated })} />
+              </div>
+
+              <textarea rows="3" value={editClient.notes || ''} onChange={(e) => setEditClient({ ...editClient, notes: e.target.value })} className="w-full px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Заметки" />
+
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowEditClientModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
+                <button
+                  onClick={() => {
+                    setClients(prev => prev.map(c => c.id === editClient.id ? { ...c, ...editClient } : c))
+                    setSelectedClient(prev => (prev && prev.id === editClient.id ? { ...prev, ...editClient } : prev))
+                    setShowEditClientModal(false)
+                  }}
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
+                >Сохранить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Client Modal */}
       {showClientModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
@@ -371,8 +477,113 @@ const ClientsPage = () => {
                 ✕
               </button>
             </div>
-            <div className="p-6 text-center text-gray-400">
-              Форма добавления клиента
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Полное название</label>
+                  <input type="text" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Краткое имя (3–4 заглавные)</label>
+                  <input type="text" value={newClient.shortName} onChange={(e) => setNewClient({ ...newClient, shortName: e.target.value.toUpperCase().slice(0,4) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Отрасль</label>
+                  <input type="text" value={newClient.industry} onChange={(e) => setNewClient({ ...newClient, industry: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">SLA</label>
+                  <select value={newClient.sla} onChange={(e) => setNewClient({ ...newClient, sla: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Premium</option>
+                    <option>Standard</option>
+                    <option>Basic</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Уровень безопасности</label>
+                  <select value={newClient.securityLevel} onChange={(e) => setNewClient({ ...newClient, securityLevel: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Critical</option>
+                    <option>High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Биллинг</label>
+                  <select value={newClient.billingCycle} onChange={(e) => setNewClient({ ...newClient, billingCycle: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Monthly</option>
+                    <option>Quarterly</option>
+                    <option>Yearly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Контактное лицо</label>
+                  <input type="text" value={newClient.contactPerson} onChange={(e) => setNewClient({ ...newClient, contactPerson: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Должность</label>
+                  <input type="text" value={newClient.position} onChange={(e) => setNewClient({ ...newClient, position: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Телефон</label>
+                  <input type="text" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Email</label>
+                  <input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Договор №</label>
+                  <input type="text" value={newClient.contractNumber} onChange={(e) => setNewClient({ ...newClient, contractNumber: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Дата подписания</label>
+                  <input type="date" value={newClient.contractDate} onChange={(e) => setNewClient({ ...newClient, contractDate: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Окончание</label>
+                  <input type="date" value={newClient.contractExpiry} onChange={(e) => setNewClient({ ...newClient, contractExpiry: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Инфраструктура</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <input type="number" min="0" value={newClient.infrastructure.servers} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, servers: Number(e.target.value || 0) } })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Серверы" />
+                  <input type="number" min="0" value={newClient.infrastructure.desktops} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, desktops: Number(e.target.value || 0) } })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Рабочие станции" />
+                  <input type="number" min="0" value={newClient.infrastructure.networkDevices} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, networkDevices: Number(e.target.value || 0) } })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Сетевое оборуд." />
+                  <div className="flex items-center gap-3 text-sm text-white">
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={newClient.infrastructure.cloudServices} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, cloudServices: e.target.checked } })} /> Cloud</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={newClient.infrastructure.onPremise} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, onPremise: e.target.checked } })} /> On-Prem</label>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Заметки</label>
+                <textarea rows="3" value={newClient.notes} onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowClientModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
+                <button
+                  onClick={() => {
+                    const id = String(Date.now())
+                    const item = { ...newClient, id }
+                    setClients(prev => [item, ...prev])
+                    setShowClientModal(false)
+                    setNewClient({
+                      id: String(Date.now()),
+                      name: '', shortName: '', industry: '', contactPerson: '', position: '', phone: '', email: '', sla: 'Standard', securityLevel: 'High', contractNumber: '', contractDate: '', contractExpiry: '', billingCycle: 'Monthly', infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true }, notes: '',
+                    })
+                  }}
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
+                >Добавить клиента</button>
+              </div>
             </div>
           </div>
         </div>
@@ -517,6 +728,31 @@ const ClientsPage = () => {
                 </button>
                 <button
                   onClick={() => {
+                    if (!projectsForClient) {
+                      setShowProjectModal(false)
+                      return
+                    }
+                    const id = `P-${projectsForClient.shortName || projectsForClient.name}-${String(Date.now()).slice(-4)}`
+                    const newItem = {
+                      id,
+                      name: newProject.name || 'Новый проект',
+                      type: newProject.type,
+                      clientId: projectsForClient.id,
+                      clientName: projectsForClient.name,
+                      status: 'Active',
+                      startDate: newProject.startDate,
+                      endDate: newProject.endDate,
+                      priority: newProject.priority,
+                      description: newProject.description,
+                      deliverables: [],
+                      team: newProject.team,
+                      budget: Number(newProject.budget || 0),
+                      progress: 0,
+                      vulnerabilities: [],
+                      tickets: [],
+                      assets: 0,
+                    }
+                    setProjects(prev => [newItem, ...prev])
                     setShowProjectModal(false)
                     setNewProject({
                       name: '',
@@ -538,9 +774,491 @@ const ClientsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Projects List Modal for a specific client */}
+      {showProjectsListModal && projectsForClient && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Проекты: {projectsForClient.name}</h2>
+              <button
+                onClick={() => {
+                  setShowProjectsListModal(false)
+                  setProjectsForClient(null)
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              {getProjectsForClient(projectsForClient.id).map((project) => (
+                <div
+                  key={project.id}
+                  className="bg-dark-card border border-dark-border rounded p-4 hover:bg-dark-card/80 transition-colors cursor-pointer"
+                  onClick={() => setSelectedProject(project)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-medium text-white">{project.name}</div>
+                      <div className="text-xs text-gray-400 mt-1">{project.description}</div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${projectStatusColors[project.status]} text-white`}>
+                      {project.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3">
+                    <span className={`px-2 py-1 rounded text-xs ${projectTypeColors[project.type]} text-white`}>
+                      {project.type}
+                    </span>
+                    <span className={`px-2 py-1 rounded text-xs ${priorityColorsProjects[project.priority]} text-white`}>
+                      {project.priority}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {project.startDate} - {project.endDate}
+                    </span>
+                    <span className="text-xs text-gray-400">Прогресс: {project.progress}%</span>
+                  </div>
+                  <div className="mt-3 bg-dark-surface rounded h-2 overflow-hidden">
+                    <div className="bg-dark-purple-primary h-full transition-all" style={{ width: `${project.progress}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Detail Modal */}
+      {selectedProject && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Target className="w-6 h-6 text-purple-400" />
+                <div>
+                  <h2 className="text-xl font-bold text-white">{selectedProject.name}</h2>
+                  <p className="text-sm text-gray-400">{selectedProject.id}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditProject({ ...selectedProject })
+                    setShowEditProjectModal(true)
+                  }}
+                  className="px-3 py-1.5 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors text-sm flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" /> Редактировать
+                </button>
+                <button
+                  onClick={() => {
+                    // Инициализируем задачи по артефактам, если пусто
+                    const start = selectedProject.startDate
+                    const end = selectedProject.endDate
+                    let initial = []
+                    const savedTasks = savedGanttByProject[selectedProject.id]
+                    if (savedTasks && Array.isArray(savedTasks)) {
+                      initial = savedTasks
+                    } else if (selectedProject.deliverables && selectedProject.deliverables.length > 0) {
+                      const total = selectedProject.deliverables.length
+                      const startDate = new Date(start)
+                      const endDate = new Date(end)
+                      const totalMs = endDate - startDate
+                      initial = selectedProject.deliverables.map((d, i) => {
+                        const segStart = new Date(startDate.getTime() + (totalMs * i) / total)
+                        const segEnd = new Date(startDate.getTime() + (totalMs * (i + 1)) / total)
+                        return {
+                          id: `${selectedProject.id}-task-${i+1}`,
+                          name: d,
+                          startDate: segStart.toISOString().slice(0, 10),
+                          endDate: segEnd.toISOString().slice(0, 10),
+                        }
+                      })
+                    } else {
+                      initial = [{
+                        id: `${selectedProject.id}-task-1`,
+                        name: 'Основная работа',
+                        startDate: start,
+                        endDate: end,
+                      }]
+                    }
+                    setGanttDraftTasks(initial)
+                    setShowGanttModal(true)
+                  }}
+                  className="px-3 py-1.5 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors text-sm"
+                >
+                  Диаграмма Ганта
+                </button>
+                <button
+                  onClick={() => setSelectedProject(null)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400">Клиент</label>
+                  <div className="mt-1 text-white">{(clients.find(c => c.id === selectedProject.clientId) || {}).name || ''}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Статус</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${projectStatusColors[selectedProject.status]} text-white`}>
+                      {selectedProject.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Тип</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${projectTypeColors[selectedProject.type]} text-white`}>
+                      {selectedProject.type}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Приоритет</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColorsProjects[selectedProject.priority]} text-white`}>
+                      {selectedProject.priority}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Сроки</label>
+                  <div className="mt-1 text-white">{selectedProject.startDate} — {selectedProject.endDate}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Бюджет</label>
+                  <div className="mt-1 text-white">{selectedProject.budget.toLocaleString('ru-RU')} ₽</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
+                <div className="text-white bg-dark-card p-3 rounded border border-dark-border">
+                  {selectedProject.description}
+                </div>
+              </div>
+
+              {selectedProject.deliverables && selectedProject.deliverables.length > 0 && (
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Артефакты</label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProject.deliverables.map((d, i) => (
+                      <span key={i} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded">{d}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Команда</label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProject.team.map((m, i) => (
+                    <span key={i} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded">{m}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-dark-surface rounded h-2 overflow-hidden">
+                <div className="bg-dark-purple-primary h-full transition-all" style={{ width: `${selectedProject.progress}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditProjectModal && editProject && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Редактировать проект</h2>
+              <button onClick={() => setShowEditProjectModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Название проекта</label>
+                <input type="text" value={editProject.name} onChange={(e) => setEditProject({ ...editProject, name: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Тип проекта</label>
+                  <select value={editProject.type} onChange={(e) => setEditProject({ ...editProject, type: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Vulnerability Scanning</option>
+                    <option>Penetration Test</option>
+                    <option>Network Scanning</option>
+                    <option>BAS</option>
+                    <option>Web Application Scanning</option>
+                    <option>Compliance Check</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
+                  <select value={editProject.priority} onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Дата начала</label>
+                  <input type="date" value={editProject.startDate} onChange={(e) => setEditProject({ ...editProject, startDate: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Дата окончания</label>
+                  <input type="date" value={editProject.endDate} onChange={(e) => setEditProject({ ...editProject, endDate: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Бюджет проекта</label>
+                <input type="number" value={editProject.budget} onChange={(e) => setEditProject({ ...editProject, budget: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+                <select value={editProject.status} onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <option>Active</option>
+                  <option>Planning</option>
+                  <option>On Hold</option>
+                  <option>Completed</option>
+                  <option>Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
+                <textarea rows="4" value={editProject.description} onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Артефакты (через запятую)</label>
+                <input type="text" value={(editProject.deliverables || []).join(', ')} onChange={(e) => setEditProject({ ...editProject, deliverables: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Команда (через запятую)</label>
+                <input type="text" value={(editProject.team || []).join(', ')} onChange={(e) => setEditProject({ ...editProject, team: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowEditProjectModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
+                <button
+                  onClick={() => {
+                    setProjects(prev => prev.map(p => p.id === editProject.id ? { ...p, ...editProject } : p))
+                    setSelectedProject(prev => (prev && prev.id === editProject.id ? { ...prev, ...editProject } : prev))
+                    setShowEditProjectModal(false)
+                  }}
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
+                >Сохранить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gantt Modal */}
+      {showGanttModal && selectedProject && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-white">Диаграмма Ганта — {selectedProject.name}</h3>
+                <p className="text-sm text-gray-400">{selectedProject.startDate} — {selectedProject.endDate}</p>
+              </div>
+              <button
+                onClick={() => setShowGanttModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Добавление задач */}
+              <GanttTaskEditor
+                tasks={ganttDraftTasks}
+                onChange={setGanttDraftTasks}
+                defaultStart={selectedProject.startDate}
+                defaultEnd={selectedProject.endDate}
+              />
+
+              {/* Рендер диаграммы */}
+              <GanttChart
+                tasks={ganttDraftTasks}
+                startDate={selectedProject.startDate}
+                endDate={selectedProject.endDate}
+              />
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowGanttModal(false)}
+                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => {
+                    setSavedGanttByProject(prev => ({ ...prev, [selectedProject.id]: ganttDraftTasks }))
+                    setShowGanttModal(false)
+                  }}
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Edit Project Modal (component defined within file for clarity)
+// Already implemented inline above within JSX conditional
+
+// Простой редактор задач для диаграммы Ганта
+const GanttTaskEditor = ({ tasks, onChange, defaultStart, defaultEnd }) => {
+  const [name, setName] = useState('')
+  const [start, setStart] = useState(defaultStart)
+  const [end, setEnd] = useState(defaultEnd)
+
+  const addTask = () => {
+    if (!name || !start || !end) return
+    // Ограничение по датам проекта
+    if (start < defaultStart || end > defaultEnd || start > end) {
+      return
+    }
+    const id = `task-${Date.now()}`
+    onChange([...
+      tasks,
+      { id, name, startDate: start, endDate: end }
+    ])
+    setName('')
+    setStart(defaultStart)
+    setEnd(defaultEnd)
+  }
+
+  const removeTask = (id) => {
+    onChange(tasks.filter(t => t.id !== id))
+  }
+
+  return (
+    <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+      <div className="grid grid-cols-4 gap-3 mb-3">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название задачи" className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
+        <input type="date" value={start} min={defaultStart} max={defaultEnd} onChange={(e) => setStart(e.target.value)} className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
+        <input type="date" value={end} min={defaultStart} max={defaultEnd} onChange={(e) => setEnd(e.target.value)} className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
+        <button onClick={addTask} className="px-3 py-2 bg-dark-purple-primary text-white rounded hover:bg-dark-purple-secondary">Добавить</button>
+      </div>
+      {tasks.length > 0 && (
+        <div className="space-y-2">
+          {tasks.map(t => (
+            <div key={t.id} className="flex items-center justify-between bg-dark-surface border border-dark-border rounded p-2">
+              <div className="text-sm text-white">{t.name}</div>
+              <div className="text-xs text-gray-400">{t.startDate} — {t.endDate}</div>
+              <button onClick={() => removeTask(t.id)} className="text-red-400 hover:text-red-300 text-sm">Удалить</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Примитивная диаграмма Ганта без зависимостей
+const GanttChart = ({ tasks, startDate, endDate }) => {
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const totalMs = Math.max(1, end - start)
+
+  const daysBetween = Math.ceil(totalMs / (1000 * 60 * 60 * 24))
+  const ticks = Math.min(12, daysBetween) // до 12 делений для читаемости
+
+  const formatTick = (i) => {
+    const d = new Date(start.getTime() + (totalMs * i) / ticks)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
+
+  return (
+    <div className="bg-dark-card border border-dark-border rounded-lg p-4 overflow-x-auto">
+      {/* Заголовок шкалы */}
+      <div className="grid" style={{ gridTemplateColumns: `200px 1fr` }}>
+        <div></div>
+        <div className="relative">
+          <div className="flex justify-between text-[10px] text-gray-400">
+            {Array.from({ length: ticks + 1 }).map((_, i) => (
+              <span key={i}>{formatTick(i)}</span>
+            ))}
+          </div>
+          <div className="absolute left-0 right-0 top-4 h-px bg-dark-border" />
+        </div>
+      </div>
+
+      {/* Задачи */}
+      <div className="space-y-2 mt-6">
+        {tasks.map(task => {
+          const s = new Date(task.startDate)
+          const e = new Date(task.endDate)
+          const left = clamp(((s - start) / totalMs) * 100, 0, 100)
+          const width = clamp(((e - s) / totalMs) * 100, 0.5, 100 - left)
+          return (
+            <div key={task.id} className="grid items-center" style={{ gridTemplateColumns: `200px 1fr` }}>
+              <div className="text-xs text-white pr-3 truncate">{task.name}</div>
+              <div className="relative h-6 bg-dark-surface border border-dark-border rounded">
+                <div
+                  className="absolute h-full bg-dark-purple-primary/70 rounded"
+                  style={{ left: `${left}%`, width: `${width}%` }}
+                  title={`${task.startDate} — ${task.endDate}`}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
 export default ClientsPage
+
+// Редактор списка дополнительных контактов клиента
+const ClientContactsEditor = ({ contacts, onChange }) => {
+  const add = () => {
+    const next = [...(contacts || []), { name: '', role: '', phone: '', email: '' }]
+    onChange(next)
+  }
+  const remove = (idx) => {
+    const next = (contacts || []).filter((_, i) => i !== idx)
+    onChange(next)
+  }
+  const update = (idx, field, value) => {
+    const next = (contacts || []).map((c, i) => i === idx ? { ...c, [field]: value } : c)
+    onChange(next)
+  }
+
+  return (
+    <div className="space-y-2">
+      {(contacts || []).map((c, idx) => (
+        <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center bg-dark-card border border-dark-border rounded p-2">
+          <input value={c.name} onChange={(e) => update(idx, 'name', e.target.value)} placeholder="Имя" className="px-2 py-1 bg-dark-surface border border-dark-border text-white rounded min-w-0" />
+          <input value={c.role} onChange={(e) => update(idx, 'role', e.target.value)} placeholder="Роль" className="px-2 py-1 bg-dark-surface border border-dark-border text-white rounded min-w-0" />
+          <input value={c.phone} onChange={(e) => update(idx, 'phone', e.target.value)} placeholder="Телефон" className="px-2 py-1 bg-dark-surface border border-dark-border text-white rounded min-w-0" />
+          <div className="flex items-center gap-2 min-w-0">
+            <input value={c.email} onChange={(e) => update(idx, 'email', e.target.value)} placeholder="Email" className="flex-1 px-2 py-1 bg-dark-surface border border-dark-border text-white rounded min-w-0" />
+            <button onClick={() => remove(idx)} className="shrink-0 text-red-400 hover:text-red-300 text-sm">Удалить</button>
+          </div>
+        </div>
+      ))}
+      <div className="pt-1">
+        <button onClick={add} className="px-3 py-1.5 bg-dark-card border border-dark-border text-white rounded hover:bg-dark-border text-sm">Добавить контакт</button>
+      </div>
+    </div>
+  )
+}
 
