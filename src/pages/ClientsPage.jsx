@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Search, Plus, Eye, Edit, Trash2, Building2, User, Phone, Mail, FileText, Calendar, Server, Users, Target } from 'lucide-react'
 import { mockClients } from '../data/mockClients'
 import { mockProjects, projectTypeColors, projectStatusColors, priorityColorsProjects } from '../data/mockProjects'
+import { mockWorkers } from '../data/mockWorkers'
 
 const ClientsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -110,8 +111,8 @@ const ClientsPage = () => {
               {/* Client Header */}
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-1">{client.shortName}</h3>
-                  <p className="text-sm text-gray-400">{client.name}</p>
+                  <h3 className="text-xl font-bold text-white mb-1">{client.name}</h3>
+                  <p className="text-sm text-gray-400">{client.shortName}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                   client.sla === 'Premium' ? 'bg-emerald-600' :
@@ -553,10 +554,7 @@ const ClientsPage = () => {
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Инфраструктура</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <input type="number" min="0" value={newClient.infrastructure.servers} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, servers: Number(e.target.value || 0) } })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Серверы" />
-                  <input type="number" min="0" value={newClient.infrastructure.desktops} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, desktops: Number(e.target.value || 0) } })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Рабочие станции" />
-                  <input type="number" min="0" value={newClient.infrastructure.networkDevices} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, networkDevices: Number(e.target.value || 0) } })} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded" placeholder="Сетевое оборуд." />
-                  <div className="flex items-center gap-3 text-sm text-white">
+                  <div className="flex items-center gap-3 text-sm text-white col-span-2 md:col-span-4">
                     <label className="flex items-center gap-2"><input type="checkbox" checked={newClient.infrastructure.cloudServices} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, cloudServices: e.target.checked } })} /> Cloud</label>
                     <label className="flex items-center gap-2"><input type="checkbox" checked={newClient.infrastructure.onPremise} onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, onPremise: e.target.checked } })} /> On-Prem</label>
                   </div>
@@ -1040,10 +1038,7 @@ const ClientsPage = () => {
                 <label className="text-sm text-gray-400 mb-2 block">Артефакты (через запятую)</label>
                 <input type="text" value={(editProject.deliverables || []).join(', ')} onChange={(e) => setEditProject({ ...editProject, deliverables: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
               </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Команда (через запятую)</label>
-                <input type="text" value={(editProject.team || []).join(', ')} onChange={(e) => setEditProject({ ...editProject, team: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
+              <ProjectTeamEditor team={editProject.team || []} onChange={(updated) => setEditProject({ ...editProject, team: updated })} />
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowEditProjectModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
                 <button
@@ -1257,6 +1252,43 @@ const ClientContactsEditor = ({ contacts, onChange }) => {
       ))}
       <div className="pt-1">
         <button onClick={add} className="px-3 py-1.5 bg-dark-card border border-dark-border text-white rounded hover:bg-dark-border text-sm">Добавить контакт</button>
+      </div>
+    </div>
+  )
+}
+
+// Редактор команды проекта с выпадающим списком и добавлением произвольных участников
+const ProjectTeamEditor = ({ team, onChange }) => {
+  const [selectedWorkerId, setSelectedWorkerId] = useState('')
+  const add = () => {
+    if (!selectedWorkerId) return
+    const worker = mockWorkers.find(w => w.id === selectedWorkerId)
+    if (!worker) return
+    if (team.includes(worker.fullName)) return
+    onChange([...team, worker.fullName])
+    setSelectedWorkerId('')
+  }
+  const remove = (name) => onChange(team.filter(t => t !== name))
+
+  return (
+    <div>
+      <label className="text-sm text-gray-400 mb-2 block">Команда</label>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {team.map(member => (
+          <span key={member} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded flex items-center gap-2">
+            {member}
+            <button onClick={() => remove(member)} className="text-gray-400 hover:text-white">✕</button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2 items-center">
+        <select value={selectedWorkerId} onChange={(e) => setSelectedWorkerId(e.target.value)} className="flex-1 px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
+          <option value="">— выбрать участника —</option>
+          {mockWorkers.map(w => (
+            <option key={w.id} value={w.id}>{w.fullName}</option>
+          ))}
+        </select>
+        <button onClick={add} className="px-3 py-2 bg-dark-card border border-dark-border text-white rounded hover:bg-dark-border text-sm">Добавить</button>
       </div>
     </div>
   )

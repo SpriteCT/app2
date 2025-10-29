@@ -6,6 +6,12 @@ Field types are illustrative. Use UUIDs (string) or database-native IDs as prefe
 
 ## Core Tables
 
+workers
+- id (pk)
+- full_name (text)
+- email (text)
+- phone (text)
+
 clients
 - id (pk)
 - name (text)
@@ -55,17 +61,15 @@ project_deliverables
 project_team_members
 - id (pk)
 - project_id (fk -> projects.id on delete cascade)
-- name (text) // if users table appears, replace with user_id
+- worker_id (fk -> workers.id on delete restrict)
 
 assets
 - id (pk)
 - client_id (fk -> clients.id on delete restrict)
-- project_id (fk -> projects.id on delete set null)
 - name (text)
 - type (text) // or enum of asset types
 - ip_address (text)
 - operating_system (text)
-- department (text)
 - owner (text)
 - status (enum: В эксплуатации|Недоступен|В обслуживании|Выведен из эксплуатации)
 - criticality (enum: Critical|High|Medium|Low)
@@ -74,7 +78,6 @@ assets
 vulnerabilities
 - id (pk)
 - client_id (fk -> clients.id on delete restrict)
-- project_id (fk -> projects.id on delete set null)
 - asset_id (fk -> assets.id on delete set null)
 - title (text)
 - description (text)
@@ -83,22 +86,18 @@ vulnerabilities
 - status (enum: Open|In Progress|Fixed|Verified)
 - criticality (enum: Critical|High|Medium|Low)
 - cvss (numeric)
+- cve (text, nullable)
 - discovered (date)
 - last_modified (date)
-- assignee (text)      // if users table appears, replace with user_id
 
-vulnerability_tags
-- vulnerability_id (fk -> vulnerabilities.id on delete cascade)
-- tag (text)
-- pk: (vulnerability_id, tag)
+-- vulnerability_tags removed
 
 tickets
 - id (pk)
 - client_id (fk -> clients.id on delete restrict)
-- project_id (fk -> projects.id on delete set null)
 - title (text)
 - description (text)
-- assignee (text)
+- assignee_id (fk -> workers.id on delete set null)
 - reporter (text)
 - priority (enum: Critical|High|Medium|Low)
 - status (enum: Open|In Progress|Fixed|Verified|Closed)
@@ -118,8 +117,7 @@ ticket_vulnerabilities   // junction: Ticket N..N Vulnerability
 - vulnerability_id (fk -> vulnerabilities.id on delete cascade)
 - pk: (ticket_id, vulnerability_id)
 
-gantt // one per project (optional record)
-- project_id (pk, fk -> projects.id on delete cascade)
+-- gantt header removed; only task rows
 
 gantt_tasks
 - id (pk)
@@ -136,9 +134,8 @@ gantt_tasks
 
 ## Indexing (recommended)
 - projects(client_id), assets(client_id), vulnerabilities(client_id), tickets(client_id)
-- assets(project_id), vulnerabilities(project_id), tickets(project_id)
 - ticket_vulnerabilities(ticket_id), ticket_vulnerabilities(vulnerability_id)
-- vulnerability_tags(vulnerability_id), vulnerability_tags(tag)
+-- vulnerability_tags removed
 - tickets(status, priority), vulnerabilities(status, criticality)
 
 ## Constraints

@@ -486,14 +486,7 @@ const AssetsPage = ({ selectedClient }) => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Проект</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="Проект X"
-                  />
-                </div>
+                {/* Project removed by schema alignment */}
                 {/* Department removed by schema alignment */}
               </div>
 

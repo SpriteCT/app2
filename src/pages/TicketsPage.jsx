@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Ticket, MessageCircle, Clock, User, Shield, Server, Info } from 'lucide-react'
 import { mockTickets, priorityColors, statusColorsTickets } from '../data/mockTickets'
+import { mockWorkers } from '../data/mockWorkers'
 import { mockVulnerabilities } from '../data/mockVulnerabilities'
 import { mockClients } from '../data/mockClients'
 
@@ -437,15 +438,10 @@ const TicketsPage = ({ selectedClient }) => {
                 <div>
                   <label className="text-sm text-gray-400">Ответственный</label>
                   <div className="mt-1 flex items-center gap-2">
-                    <select className="px-3 py-1 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm">
-                      <option>{selectedTicket.assignee}</option>
-                      <option>Петров П.П.</option>
-                      <option>Сидоров С.С.</option>
-                      <option>Козлов К.К.</option>
-                      <option>Морозов М.М.</option>
-                      <option>Волков В.В.</option>
-                      <option>Соколов С.С.</option>
-                      <option>Лебедев Л.Л.</option>
+                    <select className="px-3 py-1 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm" value={selectedTicket.assignee} onChange={() => {}}>
+                      {mockWorkers.map(w => (
+                        <option key={w.id} value={w.fullName}>{w.fullName}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -464,10 +460,7 @@ const TicketsPage = ({ selectedClient }) => {
                      selectedTicket.client === 'client-f' ? 'ВолковГрупп' : selectedTicket.client}
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-400">Проект</label>
-                  <div className="mt-1 text-white">{selectedTicket.project}</div>
-                </div>
+                {/* project removed */}
                 <div>
                   <label className="text-sm text-gray-400">Срок</label>
                   <div className="mt-1 text-white">{selectedTicket.dueDate}</div>
@@ -827,7 +820,16 @@ const TicketsPage = ({ selectedClient }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
-                  <input type="text" value={editTicket.assignee} onChange={(e) => setEditTicket({ ...editTicket, assignee: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  <select value={editTicket.assignee} onChange={(e) => setEditTicket({ ...editTicket, assignee: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option>Иванов И.И.</option>
+                    <option>Петров П.П.</option>
+                    <option>Сидоров С.С.</option>
+                    <option>Козлов К.К.</option>
+                    <option>Морозов М.М.</option>
+                    <option>Волков В.В.</option>
+                    <option>Соколов С.С.</option>
+                    <option>Лебедев Л.Л.</option>
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Срок</label>

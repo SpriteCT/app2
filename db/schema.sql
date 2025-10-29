@@ -42,6 +42,13 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============ TABLES ============
 
+-- Workers (executors/assignees)
+CREATE TABLE IF NOT EXISTS workers (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name  TEXT NOT NULL,
+  email      TEXT,
+  phone      TEXT
+);
 CREATE TABLE IF NOT EXISTS clients (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name              TEXT NOT NULL,
@@ -103,19 +110,18 @@ CREATE INDEX IF NOT EXISTS idx_project_deliverables_project ON project_deliverab
 CREATE TABLE IF NOT EXISTS project_team_members (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id  UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  name        TEXT NOT NULL
+  worker_id   UUID NOT NULL REFERENCES workers(id) ON DELETE RESTRICT
 );
 CREATE INDEX IF NOT EXISTS idx_project_team_members_project ON project_team_members(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_team_members_worker ON project_team_members(worker_id);
 
 CREATE TABLE IF NOT EXISTS assets (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id         UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
-  project_id        UUID REFERENCES projects(id) ON DELETE SET NULL,
   name              TEXT NOT NULL,
   type              TEXT NOT NULL,
   ip_address        TEXT,
   operating_system  TEXT,
-  department        TEXT,
   owner             TEXT,
   status            asset_status NOT NULL,
   criticality       priority_type NOT NULL,
@@ -123,12 +129,10 @@ CREATE TABLE IF NOT EXISTS assets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_assets_client ON assets(client_id);
-CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project_id);
 
 CREATE TABLE IF NOT EXISTS vulnerabilities (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id      UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
-  project_id     UUID REFERENCES projects(id) ON DELETE SET NULL,
   asset_id       UUID REFERENCES assets(id) ON DELETE SET NULL,
   title          TEXT NOT NULL,
   description    TEXT,
@@ -137,28 +141,23 @@ CREATE TABLE IF NOT EXISTS vulnerabilities (
   status         vuln_status NOT NULL,
   criticality    priority_type NOT NULL,
   cvss           NUMERIC,
+  cve            TEXT,
   discovered     DATE,
   last_modified  DATE,
-  assignee       TEXT
+  -- no assignee by design
 );
 
 CREATE INDEX IF NOT EXISTS idx_vulns_client ON vulnerabilities(client_id);
-CREATE INDEX IF NOT EXISTS idx_vulns_project ON vulnerabilities(project_id);
 CREATE INDEX IF NOT EXISTS idx_vulns_asset ON vulnerabilities(asset_id);
 
-CREATE TABLE IF NOT EXISTS vulnerability_tags (
-  vulnerability_id  UUID NOT NULL REFERENCES vulnerabilities(id) ON DELETE CASCADE,
-  tag               TEXT NOT NULL,
-  PRIMARY KEY (vulnerability_id, tag)
-);
+-- vulnerability_tags table removed
 
 CREATE TABLE IF NOT EXISTS tickets (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id    UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
-  project_id   UUID REFERENCES projects(id) ON DELETE SET NULL,
   title        TEXT NOT NULL,
   description  TEXT,
-  assignee     TEXT,
+  assignee_id  UUID REFERENCES workers(id) ON DELETE SET NULL,
   reporter     TEXT,
   priority     priority_type NOT NULL,
   status       ticket_status NOT NULL DEFAULT 'Open',
@@ -169,7 +168,6 @@ CREATE TABLE IF NOT EXISTS tickets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tickets_client ON tickets(client_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_project ON tickets(project_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 
 CREATE TABLE IF NOT EXISTS ticket_messages (
@@ -187,9 +185,7 @@ CREATE TABLE IF NOT EXISTS ticket_vulnerabilities (
   PRIMARY KEY (ticket_id, vulnerability_id)
 );
 
-CREATE TABLE IF NOT EXISTS gantt (
-  project_id  UUID PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE
-);
+-- gantt header table removed; only gantt_tasks per project
 
 CREATE TABLE IF NOT EXISTS gantt_tasks (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),

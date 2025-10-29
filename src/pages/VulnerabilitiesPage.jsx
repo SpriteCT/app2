@@ -183,7 +183,8 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Критичность</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Статус</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">CVSS</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ответственный</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">CVE</th>
+                
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Дата</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Действия</th>
               </tr>
@@ -230,9 +231,8 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {v.assignee}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{v.cve || '-'}</td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                     {v.discovered}
                   </td>
@@ -332,6 +332,10 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   <div className="mt-1 text-white font-semibold">{selectedVulnerability.cvss}</div>
                 </div>
                 <div>
+                  <label className="text-sm text-gray-400">CVE</label>
+                  <div className="mt-1 text-white">{selectedVulnerability.cve || '-'}</div>
+                </div>
+                <div>
                   <label className="text-sm text-gray-400">Сканер</label>
                   <div className="mt-1 text-white">{selectedVulnerability.scanner}</div>
                 </div>
@@ -343,14 +347,8 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400">Изменена</label>
                   <div className="mt-1 text-white">{selectedVulnerability.lastModified}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-400">Ответственный</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.assignee}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Проект</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.project}</div>
-                </div>
+                {/* assignee removed */}
+                {/* project removed */}
               </div>
 
               <div>
@@ -360,16 +358,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm text-gray-400">Теги</label>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {selectedVulnerability.tags.map((tag, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              {/* Tags removed as per schema alignment */}
             </div>
           </div>
         </div>
@@ -461,6 +450,11 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
               </div>
 
               <div>
+                <label className="text-sm text-gray-400 mb-2 block">CVE</label>
+                <input type="text" placeholder="CVE-2021-44228" className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+
+              <div>
                 <label className="text-sm text-gray-400 mb-2 block">Источник обнаружения</label>
                 <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
                   <option>Penetration Test</option>
@@ -480,14 +474,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 />
               </div>
 
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Иванов И.И."
-                />
-              </div>
+              {/* assignee removed in add form */}
 
               <div className="flex justify-end gap-3">
                 <button
@@ -546,6 +533,10 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   <input type="number" min="0" max="10" step="0.1" value={editVuln.cvss} onChange={(e) => setEditVuln({ ...editVuln, cvss: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
                 </div>
               </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">CVE</label>
+                <input type="text" value={editVuln.cve || ''} onChange={(e) => setEditVuln({ ...editVuln, cve: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Статус</label>
@@ -571,10 +562,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   <input type="date" value={editVuln.lastModified} onChange={(e) => setEditVuln({ ...editVuln, lastModified: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
                 </div>
               </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
-                <input type="text" value={editVuln.assignee} onChange={(e) => setEditVuln({ ...editVuln, assignee: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
+              {/* assignee removed in edit form */}
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Описание</label>
                 <textarea rows="4" value={editVuln.description} onChange={(e) => setEditVuln({ ...editVuln, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
