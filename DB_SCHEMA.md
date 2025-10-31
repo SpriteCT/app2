@@ -11,6 +11,22 @@ workers
 - full_name (text)
 - email (text)
 - phone (text)
+- created_at (timestamptz)
+- updated_at (timestamptz)
+
+asset_types
+- id (pk)
+- name (text, unique)
+- description (text)
+- created_at (timestamptz)
+- updated_at (timestamptz)
+
+scanners
+- id (pk)
+- name (text, unique)
+- description (text)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 clients
 - id (pk)
@@ -31,6 +47,8 @@ clients
 - infra_on_prem (boolean)         // onPremise
 - notes (text)
 - is_default (boolean)            // optional
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 client_additional_contacts
 - id (pk)
@@ -39,6 +57,8 @@ client_additional_contacts
 - role (text)
 - phone (text)
 - email (text)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 projects
 - id (pk)
@@ -52,28 +72,31 @@ projects
 - end_date (date)
 - budget (numeric)
 - progress (smallint) // 0..100
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
-project_deliverables
-- id (pk)
-- project_id (fk -> projects.id on delete cascade)
-- title (text)
+-- project_deliverables table removed
 
 project_team_members
 - id (pk)
 - project_id (fk -> projects.id on delete cascade)
 - worker_id (fk -> workers.id on delete restrict)
+- created_at (timestamptz)
+- updated_at (timestamptz)
+- UNIQUE(project_id, worker_id)
 
 assets
 - id (pk)
 - client_id (fk -> clients.id on delete restrict)
 - name (text)
-- type (text) // or enum of asset types
+- type_id (fk -> asset_types.id on delete restrict)
 - ip_address (text)
 - operating_system (text)
-- owner (text)
 - status (enum: В эксплуатации|Недоступен|В обслуживании|Выведен из эксплуатации)
 - criticality (enum: Critical|High|Medium|Low)
 - last_scan (timestamptz)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 vulnerabilities
 - id (pk)
@@ -81,14 +104,16 @@ vulnerabilities
 - asset_id (fk -> assets.id on delete set null)
 - title (text)
 - description (text)
-- asset_type (text)    // denorm for convenience; optional
-- scanner (text)
+- asset_type_id (fk -> asset_types.id on delete set null)
+- scanner_id (fk -> scanners.id on delete set null)
 - status (enum: Open|In Progress|Fixed|Verified)
 - criticality (enum: Critical|High|Medium|Low)
-- cvss (numeric)
+- cvss (numeric, CHECK: 0 <= cvss <= 10)
 - cve (text, nullable)
 - discovered (date)
 - last_modified (date)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 -- vulnerability_tags removed
 
@@ -98,23 +123,27 @@ tickets
 - title (text)
 - description (text)
 - assignee_id (fk -> workers.id on delete set null)
-- reporter (text)
+- reporter_id (fk -> workers.id on delete set null)
 - priority (enum: Critical|High|Medium|Low)
 - status (enum: Open|In Progress|Fixed|Verified|Closed)
 - created_at (timestamptz)
+- updated_at (timestamptz)
 - due_date (date)
 - resolution (text nullable)
 
 ticket_messages
 - id (pk)
 - ticket_id (fk -> tickets.id on delete cascade)
-- author (text)
+- author_id (fk -> workers.id on delete set null)
 - timestamp (timestamptz)
 - message (text)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 ticket_vulnerabilities   // junction: Ticket N..N Vulnerability
 - ticket_id (fk -> tickets.id on delete cascade)
 - vulnerability_id (fk -> vulnerabilities.id on delete cascade)
+- created_at (timestamptz)
 - pk: (ticket_id, vulnerability_id)
 
 -- gantt header removed; only task rows
@@ -125,9 +154,11 @@ gantt_tasks
 - name (text)
 - start_date (date)
 - end_date (date)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 
 ## Normalization Notes
-- Arrays/lists moved into separate tables: client_additional_contacts, project_deliverables, project_team_members, ticket_messages, ticket_vulnerabilities, vulnerability_tags, gantt_tasks.
+- Arrays/lists moved into separate tables: client_additional_contacts, project_team_members, ticket_messages, ticket_vulnerabilities, vulnerability_tags, gantt_tasks.
 - Removed denormalized project.clientName; obtain via join with clients.
 - Infrastructure numeric counts are not stored on clients; compute via `assets` aggregates.
 - All many-to-many represented via junctions; all one-to-many via foreign keys with appropriate on-delete actions.

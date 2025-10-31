@@ -4,6 +4,7 @@ import { mockTickets, priorityColors, statusColorsTickets } from '../data/mockTi
 import { mockWorkers } from '../data/mockWorkers'
 import { mockVulnerabilities } from '../data/mockVulnerabilities'
 import { mockClients } from '../data/mockClients'
+import { mockAssets } from '../data/mockAssets'
 
 const TicketsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -25,12 +26,13 @@ const TicketsPage = ({ selectedClient }) => {
 
   const filteredTickets = useMemo(() => {
     return tickets.filter(t => {
+      const clientName = mockClients.find(c => c.id === t.clientId)?.name || ''
       const matchesSearch = t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          t.client.toLowerCase().includes(searchTerm.toLowerCase())
+                          clientName.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesPriority = selectedPriority === 'All' || t.priority === selectedPriority
       const matchesStatus = selectedStatus === 'All' || t.status === selectedStatus
-      const matchesClient = selectedClient === 'client-all' || t.client === selectedClient
+      const matchesClient = selectedClient === 'client-all' || t.clientId === selectedClient
 
       return matchesSearch && matchesPriority && matchesStatus && matchesClient
     })
@@ -40,7 +42,7 @@ const TicketsPage = ({ selectedClient }) => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
     const filtered = selectedClient === 'client-all' 
       ? tickets 
-      : tickets.filter(t => t.client === selectedClient)
+      : tickets.filter(t => t.clientId === selectedClient)
     filtered.forEach(t => {
       if (counts.hasOwnProperty(t.priority)) {
         counts[t.priority]++
@@ -53,7 +55,7 @@ const TicketsPage = ({ selectedClient }) => {
     const counts = { Open: 0, 'In Progress': 0, Fixed: 0, Verified: 0 }
     const filtered = selectedClient === 'client-all' 
       ? tickets 
-      : tickets.filter(t => t.client === selectedClient)
+      : tickets.filter(t => t.clientId === selectedClient)
     filtered.forEach(t => {
       if (counts.hasOwnProperty(t.status)) {
         counts[t.status]++
@@ -96,7 +98,7 @@ const TicketsPage = ({ selectedClient }) => {
     if (selectedClient && selectedClient !== 'client-all') return selectedClient
     if (selectedVulns.length > 0) {
       const first = mockVulnerabilities.find(v => v.id === selectedVulns[0])
-      return first ? first.client : null
+      return first ? first.clientId : null
     }
     return null
   }, [selectedClient, selectedVulns])
@@ -109,13 +111,14 @@ const TicketsPage = ({ selectedClient }) => {
 
   const filteredVulnerabilitiesForTicket = useMemo(() => {
     return mockVulnerabilities.filter(v => {
+      const assetName = mockAssets.find(a => a.id === v.assetId)?.name || ''
       const matchesSearch = v.id.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
                           v.title.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
-                          v.asset.toLowerCase().includes(vulnSearchTerm.toLowerCase())
+                          assetName.toLowerCase().includes(vulnSearchTerm.toLowerCase())
       const matchesCriticality = vulnFilterCriticality === 'All' || v.criticality === vulnFilterCriticality
       const matchesStatus = vulnFilterStatus === 'All' || v.status === vulnFilterStatus
       const matchesClientScope = allowedClientForTicket
-        ? v.client === allowedClientForTicket
+        ? v.clientId === allowedClientForTicket
         : true
       return matchesSearch && matchesCriticality && matchesStatus && matchesClientScope
     })
@@ -163,10 +166,6 @@ const TicketsPage = ({ selectedClient }) => {
             <p className="text-gray-400">Создание и отслеживание тикетов по уязвимостям</p>
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Экспорт
-            </button>
             <button 
               onClick={() => setShowCreateModal(true)}
               className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors flex items-center gap-2"

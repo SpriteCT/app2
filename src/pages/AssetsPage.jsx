@@ -12,6 +12,11 @@ import {
 import { mockVulnerabilities } from '../data/mockVulnerabilities'
 import { mockTickets } from '../data/mockTickets'
 import { mockClients } from '../data/mockClients'
+import { mockAssetTypes } from '../data/mockAssetTypes'
+import { mockScanners } from '../data/mockScanners'
+import { criticalityColors, statusColors } from '../data/mockVulnerabilities'
+import { priorityColors, statusColorsTickets } from '../data/mockTickets'
+import { mockWorkers } from '../data/mockWorkers'
 
 const AssetsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -24,21 +29,19 @@ const AssetsPage = ({ selectedClient }) => {
   const [assets, setAssets] = useState(mockAssets)
   const [showEditAssetModal, setShowEditAssetModal] = useState(false)
   const [editAsset, setEditAsset] = useState(null)
+  const [selectedVulnerability, setSelectedVulnerability] = useState(null)
+  const [selectedTicket, setSelectedTicket] = useState(null)
 
   const filteredAssets = useMemo(() => {
     return assets.filter(a => {
       const matchesSearch = a.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           a.ipAddress.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesType = selectedType === 'All' || a.type === selectedType
+      const assetType = mockAssetTypes.find(at => at.id === a.typeId)
+      const matchesType = selectedType === 'All' || (assetType && assetType.name === selectedType)
       const matchesStatus = selectedStatus === 'All' || a.status === selectedStatus
       const matchesCriticality = selectedCriticality === 'All' || a.criticality === selectedCriticality
-      const matchesClient = selectedClient === 'client-all' || a.owner === 'Клиент A' && selectedClient === 'client-a' ||
-                            a.owner === 'Клиент B' && selectedClient === 'client-b' ||
-                            a.owner === 'Клиент C' && selectedClient === 'client-c' ||
-                            a.owner === 'Клиент D' && selectedClient === 'client-d' ||
-                            a.owner === 'Клиент E' && selectedClient === 'client-e' ||
-                            a.owner === 'Клиент F' && selectedClient === 'client-f'
+      const matchesClient = selectedClient === 'client-all' || (a.clientId && a.clientId === selectedClient)
 
       return matchesSearch && matchesType && matchesStatus && matchesCriticality && matchesClient
     })
@@ -185,7 +188,6 @@ const AssetsPage = ({ selectedClient }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">IP</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Критичность</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Статус</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Владенец</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Уязвимости</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Последнее сканирование</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Действия</th>
@@ -202,11 +204,17 @@ const AssetsPage = ({ selectedClient }) => {
                     <div className="text-xs text-gray-400">{asset.operatingSystem}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      assetTypeColors[asset.type]
-                    } text-white`}>
-                      {asset.type}
-                    </span>
+                    {(() => {
+                      const assetType = mockAssetTypes.find(at => at.id === asset.typeId)
+                      const typeName = assetType?.name || '-'
+                      return (
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          assetTypeColors[typeName] || 'bg-gray-600'
+                        } text-white`}>
+                          {typeName}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                     {asset.ipAddress}
@@ -224,9 +232,6 @@ const AssetsPage = ({ selectedClient }) => {
                     } text-white`}>
                       {asset.status}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {asset.owner}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -299,9 +304,15 @@ const AssetsPage = ({ selectedClient }) => {
                 <div>
                   <label className="text-sm text-gray-400">Тип</label>
                   <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${assetTypeColors[selectedAsset.type]} text-white`}>
-                      {selectedAsset.type}
-                    </span>
+                    {(() => {
+                      const assetType = mockAssetTypes.find(at => at.id === selectedAsset.typeId)
+                      const typeName = assetType?.name || '-'
+                      return (
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${assetTypeColors[typeName] || 'bg-gray-600'} text-white`}>
+                          {typeName}
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
                 <div>
@@ -329,10 +340,6 @@ const AssetsPage = ({ selectedClient }) => {
                   <div className="mt-1 text-white">{selectedAsset.operatingSystem}</div>
                 </div>
                 {/* Project removed by schema alignment */}
-                <div>
-                  <label className="text-sm text-gray-400">Владелец</label>
-                  <div className="mt-1 text-white">{selectedAsset.owner}</div>
-                </div>
                 {/* Department removed by schema alignment */}
                 <div>
                   <label className="text-sm text-gray-400">Последнее сканирование</label>
@@ -349,7 +356,11 @@ const AssetsPage = ({ selectedClient }) => {
                   </label>
                   <div className="space-y-2">
                     {getVulnerabilitiesForAsset(selectedAsset).map((vuln) => (
-                      <div key={vuln.id} className="bg-dark-card border border-dark-border rounded p-3">
+                      <div 
+                        key={vuln.id} 
+                        className="bg-dark-card border border-dark-border rounded p-3 cursor-pointer hover:border-dark-purple-primary transition-colors"
+                        onClick={() => setSelectedVulnerability(vuln)}
+                      >
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-sm text-white font-medium">{vuln.id}</div>
@@ -378,7 +389,11 @@ const AssetsPage = ({ selectedClient }) => {
                   </label>
                   <div className="space-y-2">
                     {getTicketsForAsset(selectedAsset).map((ticket) => (
-                      <div key={ticket.id} className="bg-dark-card border border-dark-border rounded p-3">
+                      <div 
+                        key={ticket.id} 
+                        className="bg-dark-card border border-dark-border rounded p-3 cursor-pointer hover:border-dark-purple-primary transition-colors"
+                        onClick={() => setSelectedTicket(ticket)}
+                      >
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-sm text-white font-medium">{ticket.id}</div>
@@ -430,8 +445,9 @@ const AssetsPage = ({ selectedClient }) => {
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип</label>
                   <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    {assetTypes.filter(t => t !== 'All').map(type => (
-                      <option key={type}>{type}</option>
+                    <option value="">— выберите тип —</option>
+                    {mockAssetTypes.map(type => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
                     ))}
                   </select>
                 </div>
@@ -525,9 +541,10 @@ const AssetsPage = ({ selectedClient }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип</label>
-                  <select value={editAsset.type} onChange={(e) => setEditAsset({ ...editAsset, type: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    {assetTypes.filter(t => t !== 'All').map(type => (
-                      <option key={type} value={type}>{type}</option>
+                  <select value={editAsset.typeId || ''} onChange={(e) => setEditAsset({ ...editAsset, typeId: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option value="">— выберите тип —</option>
+                    {mockAssetTypes.map(type => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
                     ))}
                   </select>
                 </div>
@@ -560,10 +577,6 @@ const AssetsPage = ({ selectedClient }) => {
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">ОС</label>
                   <input type="text" value={editAsset.operatingSystem} onChange={(e) => setEditAsset({ ...editAsset, operatingSystem: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Подразделение</label>
-                  <input type="text" value={editAsset.department} onChange={(e) => setEditAsset({ ...editAsset, department: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
                 </div>
               </div>
               <div className="flex justify-end gap-3">
@@ -633,6 +646,183 @@ const AssetsPage = ({ selectedClient }) => {
                   Импортировать
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vulnerability Detail Modal */}
+      {selectedVulnerability && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-6 h-6 text-red-400" />
+                <h2 className="text-xl font-bold text-white">Детали уязвимости</h2>
+              </div>
+              <button
+                onClick={() => setSelectedVulnerability(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400">ID</label>
+                  <div className="mt-1 text-white font-medium">{selectedVulnerability.id}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Название</label>
+                  <div className="mt-1 text-white">{selectedVulnerability.title}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Актив</label>
+                  <div className="mt-1 text-white">
+                    {mockAssets.find(a => a.id === selectedVulnerability.assetId)?.name || '-'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Тип актива</label>
+                  <div className="mt-1 text-white">
+                    {mockAssetTypes.find(at => at.id === selectedVulnerability.assetTypeId)?.name || '-'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Критичность</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      criticalityColors[selectedVulnerability.criticality]
+                    } text-white`}>
+                      {selectedVulnerability.criticality}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Статус</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      statusColors[selectedVulnerability.status]
+                    } text-white`}>
+                      {selectedVulnerability.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">CVSS</label>
+                  <div className="mt-1 text-white font-semibold">{selectedVulnerability.cvss}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">CVE</label>
+                  <div className="mt-1 text-white">{selectedVulnerability.cve || '-'}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Сканер</label>
+                  <div className="mt-1 text-white">
+                    {mockScanners.find(s => s.id === selectedVulnerability.scannerId)?.name || '-'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Обнаружена</label>
+                  <div className="mt-1 text-white">{selectedVulnerability.discovered}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Изменена</label>
+                  <div className="mt-1 text-white">{selectedVulnerability.lastModified}</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400">Описание</label>
+                <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">
+                  {selectedVulnerability.description}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ticket Detail Modal */}
+      {selectedTicket && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Link2 className="w-6 h-6 text-purple-400" />
+                <h2 className="text-xl font-bold text-white">Детали тикета</h2>
+              </div>
+              <button
+                onClick={() => setSelectedTicket(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400">ID</label>
+                  <div className="mt-1 text-white font-medium">{selectedTicket.id}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Название</label>
+                  <div className="mt-1 text-white">{selectedTicket.title}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Приоритет</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      priorityColors[selectedTicket.priority]
+                    } text-white`}>
+                      {selectedTicket.priority}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Статус</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      statusColorsTickets[selectedTicket.status]
+                    } text-white`}>
+                      {selectedTicket.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Исполнитель</label>
+                  <div className="mt-1 text-white">
+                    {selectedTicket.assigneeId ? mockWorkers.find(w => w.id === selectedTicket.assigneeId)?.fullName || '-' : '-'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Создан</label>
+                  <div className="mt-1 text-white">{selectedTicket.createdAt}</div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Срок выполнения</label>
+                  <div className="mt-1 text-white">{selectedTicket.dueDate || '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-400">Описание</label>
+                <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">
+                  {selectedTicket.description}
+                </div>
+              </div>
+
+              {selectedTicket.resolution && (
+                <div>
+                  <label className="text-sm text-gray-400">Резолюция</label>
+                  <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">
+                    {selectedTicket.resolution}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -14,7 +14,7 @@ const ReportsPage = ({ selectedClient }) => {
   const vulnerabilitiesData = useMemo(() => {
     const filtered = selectedClient === 'client-all' 
       ? mockVulnerabilities 
-      : mockVulnerabilities.filter(v => v.client === selectedClient)
+      : mockVulnerabilities.filter(v => v.clientId === selectedClient)
     
     const data = [
       { name: 'Critical', value: filtered.filter(v => v.criticality === 'Critical').length, color: '#dc2626' },
@@ -28,7 +28,7 @@ const ReportsPage = ({ selectedClient }) => {
   const ticketsByPriority = useMemo(() => {
     const filtered = selectedClient === 'client-all' 
       ? mockTickets 
-      : mockTickets.filter(t => t.client === selectedClient)
+      : mockTickets.filter(t => t.clientId === selectedClient)
     
     return [
       { name: 'Critical', value: filtered.filter(t => t.priority === 'Critical').length },
@@ -41,7 +41,7 @@ const ReportsPage = ({ selectedClient }) => {
   const ticketsByStatus = useMemo(() => {
     const filtered = selectedClient === 'client-all' 
       ? mockTickets 
-      : mockTickets.filter(t => t.client === selectedClient)
+      : mockTickets.filter(t => t.clientId === selectedClient)
     
     return [
       { name: 'Open', value: filtered.filter(t => t.status === 'Open').length, color: '#9333ea' },
@@ -82,17 +82,10 @@ const ReportsPage = ({ selectedClient }) => {
           <div className="flex gap-3">
             <button 
               onClick={() => setShowReportModal(true)}
-              className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />
               Сформировать отчёт
-            </button>
-            <button 
-              onClick={() => setShowReportModal(true)}
-              className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Экспорт данных
             </button>
           </div>
         </div>
@@ -222,41 +215,6 @@ const ReportsPage = ({ selectedClient }) => {
         </div>
       </div>
 
-      {/* Report Templates */}
-      <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Шаблоны отчётов</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-dark-purple-primary transition-colors cursor-pointer">
-            <FileText className="w-8 h-8 text-blue-400 mb-2" />
-            <h4 className="text-white font-medium mb-1">Еженедельный отчёт</h4>
-            <p className="text-sm text-gray-400 mb-3">Статистика за неделю</p>
-            <button className="text-sm text-dark-purple-primary hover:text-dark-purple-secondary">
-              Сформировать →
-            </button>
-          </div>
-          
-          <div className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-dark-purple-primary transition-colors cursor-pointer">
-            <FileText className="w-8 h-8 text-purple-400 mb-2" />
-            <h4 className="text-white font-medium mb-1">Ежемесячный отчёт</h4>
-            <p className="text-sm text-gray-400 mb-3">Полная статистика за месяц</p>
-            <button className="text-sm text-dark-purple-primary hover:text-dark-purple-secondary">
-              Сформировать →
-            </button>
-          </div>
-          
-          <div className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-dark-purple-primary transition-colors cursor-pointer">
-            <FileText className="w-8 h-8 text-green-400 mb-2" />
-            <h4 className="text-white font-medium mb-1">Отчёт для клиента</h4>
-            <p className="text-sm text-gray-400 mb-3">Итоговый отчёт по проекту</p>
-            <button className="text-sm text-dark-purple-primary hover:text-dark-purple-secondary">
-              Сформировать →
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Report Modal */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -286,37 +244,24 @@ const ReportsPage = ({ selectedClient }) => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Дата начала</label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  />
+              {reportType === 'client' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Дата начала</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Дата окончания</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Дата окончания</label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Формат</label>
-                <div className="flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">
-                    PDF
-                  </button>
-                  <button className="flex-1 px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">
-                    Excel
-                  </button>
-                  <button className="flex-1 px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">
-                    Word
-                  </button>
-                </div>
-              </div>
+              )}
 
               <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-4">
                 <p className="text-blue-400 text-sm">

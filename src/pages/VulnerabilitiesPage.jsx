@@ -1,7 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { Search, Filter, Plus, Download, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react'
+import { Search, Filter, Plus, Download, Eye, Edit, Trash2, AlertTriangle, Ticket, Info } from 'lucide-react'
 import { mockVulnerabilities, criticalityColors, statusColors } from '../data/mockVulnerabilities'
 import { mockAssets } from '../data/mockAssets'
+import { mockAssetTypes } from '../data/mockAssetTypes'
+import { mockScanners } from '../data/mockScanners'
+import { mockWorkers } from '../data/mockWorkers'
+import { mockClients } from '../data/mockClients'
+import { mockTickets } from '../data/mockTickets'
 
 const VulnerabilitiesPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -15,31 +20,34 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
   const [vulns, setVulns] = useState(mockVulnerabilities)
   const [assetSearch, setAssetSearch] = useState('')
   const [createClientId, setCreateClientId] = useState('')
+  const [showCreateTicketModal, setShowCreateTicketModal] = useState(false)
+  const [ticketFromVuln, setTicketFromVuln] = useState(null)
+  const [createTicketPriority, setCreateTicketPriority] = useState('High')
+  const [createTicketDescription, setCreateTicketDescription] = useState('')
+  const [tickets, setTickets] = useState(mockTickets)
+  const [vulnSearchTerm, setVulnSearchTerm] = useState('')
+  const [vulnFilterCriticality, setVulnFilterCriticality] = useState('All')
+  const [vulnFilterStatus, setVulnFilterStatus] = useState('All')
+  const [selectedVulns, setSelectedVulns] = useState([])
+  const [autoTitle, setAutoTitle] = useState('')
   const filteredAssets = useMemo(() => {
     const term = assetSearch.toLowerCase()
-    const ownerByClient = (id) => (
-      id === '1' ? 'Клиент A' :
-      id === '2' ? 'Клиент B' :
-      id === '3' ? 'Клиент C' :
-      id === '4' ? 'Клиент D' :
-      id === '5' ? 'Клиент E' :
-      id === '6' ? 'Клиент F' : null
-    )
     return mockAssets.filter(a => {
       const matchesTerm = a.name.toLowerCase().includes(term)
-      const matchesClient = createClientId ? (a.owner === ownerByClient(createClientId)) : true
-      return matchesTerm && matchesClient
+      // TODO: Filter by client_id when available
+      return matchesTerm
     })
-  }, [assetSearch, createClientId])
+  }, [assetSearch])
 
   const filteredVulnerabilities = useMemo(() => {
     return vulns.filter(v => {
+      const assetName = mockAssets.find(a => a.id === v.assetId)?.name || ''
       const matchesSearch = v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           v.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          v.asset.toLowerCase().includes(searchTerm.toLowerCase())
+                          assetName.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCriticality = selectedCriticality === 'All' || v.criticality === selectedCriticality
       const matchesStatus = selectedStatus === 'All' || v.status === selectedStatus
-      const matchesClient = selectedClient === 'client-all' || v.client === selectedClient
+      const matchesClient = selectedClient === 'client-all' || v.clientId === selectedClient
 
       return matchesSearch && matchesCriticality && matchesStatus && matchesClient
     })
@@ -49,7 +57,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
     const filtered = selectedClient === 'client-all' 
       ? mockVulnerabilities 
-      : mockVulnerabilities.filter(v => v.client === selectedClient)
+      : mockVulnerabilities.filter(v => v.clientId === selectedClient)
     filtered.forEach(v => {
       if (counts.hasOwnProperty(v.criticality)) {
         counts[v.criticality]++
@@ -197,10 +205,14 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-white">{v.title}</div>
-                    <div className="text-xs text-gray-400">{v.scanner}</div>
+                    <div className="text-xs text-gray-400">
+                      {mockScanners.find(s => s.id === v.scannerId)?.name || '-'}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-300">{v.asset}</span>
+                    <span className="text-sm text-gray-300">
+                      {mockAssets.find(a => a.id === v.assetId)?.name || '-'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -301,11 +313,15 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400">Актив</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.asset}</div>
+                  <div className="mt-1 text-white">
+                    {mockAssets.find(a => a.id === selectedVulnerability.assetId)?.name || '-'}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400">Тип актива</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.assetType}</div>
+                  <div className="mt-1 text-white">
+                    {mockAssetTypes.find(at => at.id === selectedVulnerability.assetTypeId)?.name || '-'}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400">Критичность</label>
@@ -337,7 +353,9 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400">Сканер</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.scanner}</div>
+                  <div className="mt-1 text-white">
+                    {mockScanners.find(s => s.id === selectedVulnerability.scannerId)?.name || '-'}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400">Обнаружена</label>
@@ -359,6 +377,21 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
               </div>
 
               {/* Tags removed as per schema alignment */}
+              
+              <div className="flex justify-end pt-4 border-t border-dark-border">
+                <button
+                  onClick={() => {
+                    setTicketFromVuln(selectedVulnerability)
+                    setSelectedVulns([selectedVulnerability.id]) // Предвыбираем уязвимость
+                    setShowCreateTicketModal(true)
+                    setSelectedVulnerability(null)
+                  }}
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors flex items-center gap-2"
+                >
+                  <Ticket className="w-4 h-4" />
+                  Создать тикет
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -403,12 +436,10 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип актива</label>
                   <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option>Web Server</option>
-                    <option>Application Server</option>
-                    <option>Database Server</option>
-                    <option>File Server</option>
-                    <option>Web Application</option>
-                    <option>API Server</option>
+                    <option value="">— выберите тип —</option>
+                    {mockAssetTypes.map(at => (
+                      <option key={at.id} value={at.id}>{at.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -455,13 +486,13 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
               </div>
 
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Источник обнаружения</label>
+
+                <label className="text-sm text-gray-400 mb-2 block">Сканер</label>
                 <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                  <option>Penetration Test</option>
-                  <option>Ручной ввод</option>
-                  <option>Nessus</option>
-                  <option>OpenVAS</option>
-                  <option>Metasploit</option>
+                  <option value="">— выберите сканер —</option>
+                  {mockScanners.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -515,7 +546,12 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип актива</label>
-                  <input type="text" value={editVuln.assetType} onChange={(e) => setEditVuln({ ...editVuln, assetType: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  <select value={editVuln.assetTypeId || ''} onChange={(e) => setEditVuln({ ...editVuln, assetTypeId: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option value="">— выберите тип —</option>
+                    {mockAssetTypes.map(at => (
+                      <option key={at.id} value={at.id}>{at.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -530,7 +566,14 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">CVSS</label>
-                  <input type="number" min="0" max="10" step="0.1" value={editVuln.cvss} onChange={(e) => setEditVuln({ ...editVuln, cvss: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  <input type="number" min="0" max="10" step="0.1" value={editVuln.cvss} onChange={(e) => {
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0 && val <= 10) {
+                      setEditVuln({ ...editVuln, cvss: val })
+                    } else if (e.target.value === '') {
+                      setEditVuln({ ...editVuln, cvss: '' })
+                    }
+                  }} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
                 </div>
               </div>
               <div>
@@ -549,7 +592,12 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Сканер</label>
-                  <input type="text" value={editVuln.scanner} onChange={(e) => setEditVuln({ ...editVuln, scanner: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  <select value={editVuln.scannerId || ''} onChange={(e) => setEditVuln({ ...editVuln, scannerId: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option value="">— выберите сканер —</option>
+                    {mockScanners.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -641,6 +689,275 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
           </div>
         </div>
       )}
+
+      {/* Create Ticket from Vulnerability Modal */}
+      {showCreateTicketModal && ticketFromVuln && (() => {
+        // Определяем допустимого клиента для создаваемого тикета
+        const allowedClientForTicket = ticketFromVuln.clientId
+        const allowedClientName = mockClients.find(c => c.id === allowedClientForTicket)?.name || ''
+
+        // Автогенерация названия тикета от клиента
+        const recomputeAutoTitle = () => {
+          if (allowedClientName) {
+            return `Тикет для клиента: ${allowedClientName}`
+          }
+          return ''
+        }
+
+        // Фильтрация уязвимостей для тикета (только того же клиента)
+        const filteredVulnerabilitiesForTicket = mockVulnerabilities.filter(v => {
+          const assetName = mockAssets.find(a => a.id === v.assetId)?.name || ''
+          const matchesSearch = v.id.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
+                              v.title.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
+                              assetName.toLowerCase().includes(vulnSearchTerm.toLowerCase())
+          const matchesCriticality = vulnFilterCriticality === 'All' || v.criticality === vulnFilterCriticality
+          const matchesStatus = vulnFilterStatus === 'All' || v.status === vulnFilterStatus
+          const matchesClientScope = allowedClientForTicket
+            ? v.clientId === allowedClientForTicket
+            : true
+          return matchesSearch && matchesCriticality && matchesStatus && matchesClientScope
+        })
+
+        const isVulnDisabled = (v) => {
+          return Boolean(allowedClientForTicket && v.clientId !== allowedClientForTicket)
+        }
+
+        const handleVulnToggle = (vulnId) => {
+          setSelectedVulns(prev =>
+            prev.includes(vulnId)
+              ? prev.filter(id => id !== vulnId)
+              : [...prev, vulnId]
+          )
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
+              <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Создать новый тикет</h2>
+                <button
+                  onClick={() => {
+                    setShowCreateTicketModal(false)
+                    setTicketFromVuln(null)
+                    setSelectedVulns([])
+                    setVulnSearchTerm('')
+                    setVulnFilterCriticality('All')
+                    setVulnFilterStatus('All')
+                    setAutoTitle('')
+                    setCreateTicketDescription('')
+                    setCreateTicketPriority('High')
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Название</label>
+                  <input
+                    type="text"
+                    value={autoTitle || recomputeAutoTitle()}
+                    onChange={(e) => setAutoTitle(e.target.value)}
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                    placeholder="Тикет для клиента"
+                  />
+                  <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    Название автоматически формируется от клиента
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
+                    <select
+                      value={createTicketPriority}
+                      onChange={(e) => setCreateTicketPriority(e.target.value)}
+                      className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                    >
+                      <option>Critical</option>
+                      <option>High</option>
+                      <option>Medium</option>
+                      <option>Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
+                    <input
+                      type="text"
+                      value={allowedClientName}
+                      disabled
+                      className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg opacity-70 cursor-not-allowed"
+                      placeholder="Определится по выбору уязвимостей или фильтру клиента"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Выберите уязвимости ({selectedVulns.length} выбрано)</label>
+                  
+                  {/* Search and filters */}
+                  <div className="bg-dark-card border border-dark-border rounded-lg p-3 space-y-3 mb-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={vulnSearchTerm}
+                        onChange={(e) => setVulnSearchTerm(e.target.value)}
+                        placeholder="Поиск по ID, названию или активу..."
+                        className="w-full pl-10 pr-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <select
+                        value={vulnFilterCriticality}
+                        onChange={(e) => setVulnFilterCriticality(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm"
+                      >
+                        <option value="All">Все уровни</option>
+                        <option value="Critical">Critical</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                      
+                      <select
+                        value={vulnFilterStatus}
+                        onChange={(e) => setVulnFilterStatus(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm"
+                      >
+                        <option value="All">Все статусы</option>
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Fixed">Fixed</option>
+                        <option value="Verified">Verified</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Vulnerabilities list */}
+                  <div className="bg-dark-card border border-dark-border rounded-lg max-h-64 overflow-y-auto p-3 space-y-2">
+                    {filteredVulnerabilitiesForTicket.length === 0 ? (
+                      <div className="text-center text-gray-400 py-4 text-sm">Уязвимости не найдены</div>
+                    ) : (
+                      filteredVulnerabilitiesForTicket.map((vuln) => (
+                        <label 
+                          key={vuln.id} 
+                          className={`flex items-start gap-3 ${isVulnDisabled(vuln) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-dark-border'} p-3 rounded border transition-colors ${
+                            selectedVulns.includes(vuln.id) ? 'border-dark-purple-primary bg-dark-purple-primary/10' : 'border-transparent'
+                          }`}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={selectedVulns.includes(vuln.id)}
+                            onChange={() => handleVulnToggle(vuln.id)}
+                            disabled={isVulnDisabled(vuln)}
+                            className="mt-0.5 accent-dark-purple-primary" 
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-white">{vuln.id}</span>
+                              <div className="flex gap-2">
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  vuln.criticality === 'Critical' ? 'bg-red-600' :
+                                  vuln.criticality === 'High' ? 'bg-orange-600' :
+                                  vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
+                                } text-white`}>
+                                  {vuln.criticality}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  vuln.status === 'Open' ? 'bg-purple-600' :
+                                  vuln.status === 'In Progress' ? 'bg-blue-600' :
+                                  vuln.status === 'Fixed' ? 'bg-green-600' : 'bg-teal-600'
+                                } text-white`}>
+                                  {vuln.status}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-300 mb-1">{vuln.title}</div>
+                            <div className="text-xs text-gray-400">Актив: {mockAssets.find(a => a.id === vuln.assetId)?.name || '-'}</div>
+                            <div className="text-[10px] text-gray-500 mt-1">Клиент: {mockClients.find(c => c.id === vuln.clientId)?.name || '-'}</div>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Описание</label>
+                  <textarea
+                    rows="4"
+                    value={createTicketDescription}
+                    onChange={(e) => setCreateTicketDescription(e.target.value)}
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                    placeholder="Опишите проблему..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCreateTicketModal(false)
+                      setTicketFromVuln(null)
+                      setSelectedVulns([])
+                      setVulnSearchTerm('')
+                      setVulnFilterCriticality('All')
+                      setVulnFilterStatus('All')
+                      setAutoTitle('')
+                      setCreateTicketDescription('')
+                      setCreateTicketPriority('High')
+                    }}
+                    className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={() => {
+                      const client = mockClients.find(c => c.id === allowedClientForTicket)
+                      const clientShortName = client?.shortName || 'UNK'
+                      const ticketId = `T-${clientShortName}-${String(Date.now()).slice(-4)}`
+                      const newTicket = {
+                        id: ticketId,
+                        clientId: allowedClientForTicket,
+                        title: autoTitle || recomputeAutoTitle() || `Тикет для клиента: ${allowedClientName}`,
+                        vulnerabilities: selectedVulns.length > 0 ? selectedVulns : [ticketFromVuln.id],
+                        priority: createTicketPriority,
+                        status: 'Open',
+                        assigneeId: null,
+                        reporterId: null,
+                        createdAt: new Date().toISOString().split('T')[0],
+                        updatedAt: new Date().toISOString().split('T')[0],
+                        dueDate: '',
+                        description: createTicketDescription || `Требуется устранить уязвимость ${ticketFromVuln.id}: ${ticketFromVuln.title}`,
+                        resolution: '',
+                        chatMessages: [],
+                      }
+                      setTickets(prev => [newTicket, ...prev])
+                      setShowCreateTicketModal(false)
+                      setTicketFromVuln(null)
+                      setSelectedVulns([])
+                      setVulnSearchTerm('')
+                      setVulnFilterCriticality('All')
+                      setVulnFilterStatus('All')
+                      setAutoTitle('')
+                      setCreateTicketDescription('')
+                      setCreateTicketPriority('High')
+                    }}
+                    className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={!allowedClientForTicket || (selectedVulns.length === 0 && !ticketFromVuln)}
+                  >
+                    Создать тикет
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

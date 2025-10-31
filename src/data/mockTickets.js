@@ -2,14 +2,13 @@
 export const mockTickets = [
   {
     id: 'T-TSV-001',
+    clientId: '1',
     title: 'SQL Injection на web-01.example.com',
     vulnerabilities: ['V-TSV-001'],
     priority: 'Critical',
     status: 'Open',
-    assignee: 'Иванов И.И.',
-    reporter: 'Security Team',
-    client: '1',
-    project: 'Проект X',
+    assigneeId: 'w-1', // Иванов И.И.
+    reporterId: null, // Security Team - не worker
     createdAt: '2024-01-15',
     updatedAt: '2024-01-20',
     dueDate: '2024-01-22',
@@ -18,13 +17,13 @@ export const mockTickets = [
     chatMessages: [
       {
         id: 'msg-1',
-        author: 'Иванов И.И.',
+        authorId: 'w-1', // Иванов И.И.
         timestamp: '2024-01-15 10:30',
         message: 'Начинаю анализ уязвимости',
       },
       {
         id: 'msg-2',
-        author: 'Security Team',
+        authorId: null, // Security Team - не worker
         timestamp: '2024-01-15 11:00',
         message: 'Приоритет: Critical. Требуется срочное устранение',
       },
@@ -32,14 +31,13 @@ export const mockTickets = [
   },
   {
     id: 'T-TSV-002',
+    clientId: '1',
     title: 'Устаревшая версия Apache Tomcat',
     vulnerabilities: ['V-TSV-002'],
     priority: 'High',
     status: 'In Progress',
-    assignee: 'Петров П.П.',
-    reporter: 'OpenVAS Scanner',
-    client: '1',
-    project: 'Клиент A',
+    assigneeId: 'w-2', // Петров П.П.
+    reporterId: null, // OpenVAS Scanner - не worker
     createdAt: '2024-01-10',
     updatedAt: '2024-01-22',
     dueDate: '2024-01-25',
@@ -48,13 +46,13 @@ export const mockTickets = [
     chatMessages: [
       {
         id: 'msg-3',
-        author: 'Петров П.П.',
+        authorId: 'w-2', // Петров П.П.
         timestamp: '2024-01-12 14:00',
         message: 'Обновление запланировано на 24.01.2024',
       },
       {
         id: 'msg-4',
-        author: 'Менеджер проекта',
+        authorId: null, // Менеджер проекта - не worker
         timestamp: '2024-01-12 14:30',
         message: 'Ок, согласовано. Необходимо предупредить клиента о даунтайме',
       },
@@ -62,14 +60,13 @@ export const mockTickets = [
   },
   {
     id: 'T-VGP-001',
+    clientId: '6',
     title: 'Лог4дж уязвимость',
     vulnerabilities: ['V-VGP-001'],
     priority: 'Critical',
     status: 'Open',
-    assignee: 'Волков В.В.',
-    reporter: 'Nessus Scanner',
-    client: '6',
-    project: 'Аудит безопасности',
+    assigneeId: 'w-6', // Волков В.В.
+    reporterId: null, // Nessus Scanner - не worker
     createdAt: '2024-01-08',
     updatedAt: '2024-01-20',
     dueDate: '2024-01-21',
@@ -78,7 +75,7 @@ export const mockTickets = [
     chatMessages: [
       {
         id: 'msg-5',
-        author: 'Волков В.В.',
+        authorId: 'w-6', // Волков В.В.
         timestamp: '2024-01-08 09:00',
         message: 'Действительно критично. Начинаю работу',
       },
@@ -86,14 +83,13 @@ export const mockTickets = [
   },
   {
     id: 'T-MDD-001',
+    clientId: '4',
     title: 'Открытые SMB порты',
     vulnerabilities: ['V-MDD-002'],
     priority: 'High',
     status: 'Open',
-    assignee: 'Козлов К.К.',
-    reporter: 'Security Team',
-    client: '3',
-    project: 'Network Scan',
+    assigneeId: 'w-4', // Козлов К.К.
+    reporterId: null, // Security Team - не worker
     createdAt: '2024-01-12',
     updatedAt: '2024-01-19',
     dueDate: '2024-01-26',
@@ -102,7 +98,7 @@ export const mockTickets = [
     chatMessages: [
       {
         id: 'msg-6',
-        author: 'Козлов К.К.',
+        authorId: 'w-4', // Козлов К.К.
         timestamp: '2024-01-13 08:30',
         message: 'Проверяю конфигурацию файрвола',
       },
@@ -110,14 +106,13 @@ export const mockTickets = [
   },
   {
     id: 'T-RZP-001',
+    clientId: '5',
     title: 'Security Headers отсутствуют',
     vulnerabilities: ['V-MDD-003'],
     priority: 'Low',
     status: 'Open',
-    assignee: 'Морозов М.М.',
-    reporter: 'OpenVAS Scanner',
-    client: '5',
-    project: 'Web Security',
+    assigneeId: 'w-5', // Морозов М.М.
+    reporterId: null, // OpenVAS Scanner - не worker
     createdAt: '2024-01-14',
     updatedAt: '2024-01-21',
     dueDate: '2024-01-30',
@@ -127,14 +122,13 @@ export const mockTickets = [
   },
   {
     id: 'T-FNH-001',
+    clientId: '2',
     title: 'SSRF уязвимость',
     vulnerabilities: ['V-FNH-001'],
     priority: 'High',
     status: 'Verified',
-    assignee: 'Соколов С.С.',
-    reporter: 'PenTest Team',
-    client: '2',
-    project: 'Penetration Test',
+    assigneeId: 'w-7', // Соколов С.С.
+    reporterId: null, // PenTest Team - не worker
     createdAt: '2024-01-11',
     updatedAt: '2024-01-17',
     dueDate: '2024-01-18',
@@ -143,19 +137,19 @@ export const mockTickets = [
     chatMessages: [
       {
         id: 'msg-7',
-        author: 'Соколов С.С.',
+        authorId: 'w-7', // Соколов С.С.
         timestamp: '2024-01-11 15:00',
         message: 'Начинаю исправление',
       },
       {
         id: 'msg-8',
-        author: 'Соколов С.С.',
+        authorId: 'w-7', // Соколов С.С.
         timestamp: '2024-01-17 12:00',
         message: 'Уязвимость устранена. Требуется верификация',
       },
       {
         id: 'msg-9',
-        author: 'QA Team',
+        authorId: null, // QA Team - не worker
         timestamp: '2024-01-17 16:00',
         message: 'Верифицировано. Уязвимость закрыта',
       },
@@ -163,14 +157,13 @@ export const mockTickets = [
   },
   {
     id: 'T-MDD-002',
+    clientId: '3',
     title: 'Множественные проблемы с паролями',
     vulnerabilities: ['V-MDD-001'],
     priority: 'Medium',
     status: 'Fixed',
-    assignee: 'Сидоров С.С.',
-    reporter: 'Security Audit',
-    client: '3',
-    project: 'Security Audit',
+    assigneeId: 'w-3', // Сидоров С.С.
+    reporterId: null, // Security Audit - не worker
     createdAt: '2024-01-05',
     updatedAt: '2024-01-18',
     dueDate: '2024-01-20',
@@ -179,13 +172,13 @@ export const mockTickets = [
     chatMessages: [
       {
         id: 'msg-10',
-        author: 'Сидоров С.С.',
+        authorId: 'w-3', // Сидоров С.С.
         timestamp: '2024-01-06 10:00',
         message: 'Обновляю политику паролей',
       },
       {
         id: 'msg-11',
-        author: 'Администратор',
+        authorId: null, // Администратор - не worker
         timestamp: '2024-01-18 14:00',
         message: 'Политика внедрена. Все пароли обновлены',
       },

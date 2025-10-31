@@ -517,22 +517,25 @@ const ClientsPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Контактное лицо</label>
-                  <input type="text" value={newClient.contactPerson} onChange={(e) => setNewClient({ ...newClient, contactPerson: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Должность</label>
-                  <input type="text" value={newClient.position} onChange={(e) => setNewClient({ ...newClient, position: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Телефон</label>
-                  <input type="text" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Email</label>
-                  <input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                <label className="text-sm text-gray-400 mb-3 block">Контактное лицо</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">ФИО</label>
+                    <input type="text" value={newClient.contactPerson} onChange={(e) => setNewClient({ ...newClient, contactPerson: e.target.value })} className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Должность</label>
+                    <input type="text" value={newClient.position} onChange={(e) => setNewClient({ ...newClient, position: e.target.value })} className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Телефон</label>
+                    <input type="text" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Email</label>
+                    <input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  </div>
                 </div>
               </div>
 
@@ -742,7 +745,6 @@ const ClientsPage = () => {
                       endDate: newProject.endDate,
                       priority: newProject.priority,
                       description: newProject.description,
-                      deliverables: [],
                       team: newProject.team,
                       budget: Number(newProject.budget || 0),
                       progress: 0,
@@ -858,21 +860,6 @@ const ClientsPage = () => {
                     const savedTasks = savedGanttByProject[selectedProject.id]
                     if (savedTasks && Array.isArray(savedTasks)) {
                       initial = savedTasks
-                    } else if (selectedProject.deliverables && selectedProject.deliverables.length > 0) {
-                      const total = selectedProject.deliverables.length
-                      const startDate = new Date(start)
-                      const endDate = new Date(end)
-                      const totalMs = endDate - startDate
-                      initial = selectedProject.deliverables.map((d, i) => {
-                        const segStart = new Date(startDate.getTime() + (totalMs * i) / total)
-                        const segEnd = new Date(startDate.getTime() + (totalMs * (i + 1)) / total)
-                        return {
-                          id: `${selectedProject.id}-task-${i+1}`,
-                          name: d,
-                          startDate: segStart.toISOString().slice(0, 10),
-                          endDate: segEnd.toISOString().slice(0, 10),
-                        }
-                      })
                     } else {
                       initial = [{
                         id: `${selectedProject.id}-task-1`,
@@ -943,16 +930,6 @@ const ClientsPage = () => {
                 </div>
               </div>
 
-              {selectedProject.deliverables && selectedProject.deliverables.length > 0 && (
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Артефакты</label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProject.deliverables.map((d, i) => (
-                      <span key={i} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded">{d}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Команда</label>
@@ -1033,10 +1010,6 @@ const ClientsPage = () => {
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Описание</label>
                 <textarea rows="4" value={editProject.description} onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Артефакты (через запятую)</label>
-                <input type="text" value={(editProject.deliverables || []).join(', ')} onChange={(e) => setEditProject({ ...editProject, deliverables: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
               </div>
               <ProjectTeamEditor team={editProject.team || []} onChange={(updated) => setEditProject({ ...editProject, team: updated })} />
               <div className="flex justify-end gap-3">
