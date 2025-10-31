@@ -4,7 +4,6 @@ Pydantic schemas for request/response validation
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import date, datetime
-from uuid import UUID
 from app.models import (
     SLAType, SecurityLevelType, BillingCycleType, ProjectType, ProjectStatus,
     PriorityType, AssetStatus, VulnStatus, TicketStatus
@@ -35,7 +34,7 @@ class WorkerUpdate(WorkerBase):
 
 
 class Worker(WorkerBase, TimestampMixin):
-    id: UUID
+    id: int
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,7 +55,7 @@ class AssetTypeUpdate(AssetTypeBase):
 
 
 class AssetType(AssetTypeBase, TimestampMixin):
-    id: UUID
+    id: int
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -77,7 +76,7 @@ class ScannerUpdate(ScannerBase):
 
 
 class Scanner(ScannerBase, TimestampMixin):
-    id: UUID
+    id: int
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -99,8 +98,8 @@ class ClientAdditionalContactUpdate(ClientAdditionalContactBase):
 
 
 class ClientAdditionalContact(ClientAdditionalContactBase, TimestampMixin):
-    id: UUID
-    client_id: UUID
+    id: int
+    client_id: int
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -114,12 +113,12 @@ class ClientBase(BaseModel):
     position: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
-    sla: SLAType = SLAType.STANDARD
-    security_level: SecurityLevelType = SecurityLevelType.HIGH
+    sla: str = "Standard"
+    security_level: str = "High"
     contract_number: Optional[str] = None
     contract_date: Optional[date] = None
     contract_expiry: Optional[date] = None
-    billing_cycle: BillingCycleType = BillingCycleType.MONTHLY
+    billing_cycle: str = "Monthly"
     infra_cloud: bool = True
     infra_on_prem: bool = True
     notes: Optional[str] = None
@@ -138,12 +137,12 @@ class ClientUpdate(BaseModel):
     position: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
-    sla: Optional[SLAType] = None
-    security_level: Optional[SecurityLevelType] = None
+    sla: Optional[str] = None
+    security_level: Optional[str] = None
     contract_number: Optional[str] = None
     contract_date: Optional[date] = None
     contract_expiry: Optional[date] = None
-    billing_cycle: Optional[BillingCycleType] = None
+    billing_cycle: Optional[str] = None
     infra_cloud: Optional[bool] = None
     infra_on_prem: Optional[bool] = None
     notes: Optional[str] = None
@@ -151,7 +150,7 @@ class ClientUpdate(BaseModel):
 
 
 class Client(ClientBase, TimestampMixin):
-    id: UUID
+    id: int
     additional_contacts: List[ClientAdditionalContact] = []
     
     model_config = ConfigDict(from_attributes=True)
@@ -159,7 +158,7 @@ class Client(ClientBase, TimestampMixin):
 
 # Project Team Member schemas
 class ProjectTeamMemberBase(BaseModel):
-    worker_id: UUID
+    worker_id: int
 
 
 class ProjectTeamMemberCreate(ProjectTeamMemberBase):
@@ -167,8 +166,8 @@ class ProjectTeamMemberCreate(ProjectTeamMemberBase):
 
 
 class ProjectTeamMember(ProjectTeamMemberBase, TimestampMixin):
-    id: UUID
-    project_id: UUID
+    id: int
+    project_id: int
     worker: Optional[Worker] = None
     
     model_config = ConfigDict(from_attributes=True)
@@ -178,9 +177,9 @@ class ProjectTeamMember(ProjectTeamMemberBase, TimestampMixin):
 class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
-    type: ProjectType
-    status: ProjectStatus = ProjectStatus.ACTIVE
-    priority: PriorityType = PriorityType.HIGH
+    type: str
+    status: str = "Active"
+    priority: str = "High"
     start_date: date
     end_date: date
     budget: Optional[float] = None
@@ -188,26 +187,26 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    client_id: UUID
-    team_member_ids: Optional[List[UUID]] = []
+    client_id: int
+    team_member_ids: Optional[List[int]] = []
 
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    type: Optional[ProjectType] = None
-    status: Optional[ProjectStatus] = None
-    priority: Optional[PriorityType] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     budget: Optional[float] = None
     progress: Optional[int] = Field(None, ge=0, le=100)
-    team_member_ids: Optional[List[UUID]] = None
+    team_member_ids: Optional[List[int]] = None
 
 
 class Project(ProjectBase, TimestampMixin):
-    id: UUID
-    client_id: UUID
+    id: int
+    client_id: int
     client: Optional[Client] = None
     team_members: List[ProjectTeamMember] = []
     
@@ -217,31 +216,31 @@ class Project(ProjectBase, TimestampMixin):
 # Asset schemas
 class AssetBase(BaseModel):
     name: str
-    type_id: UUID
+    type_id: int
     ip_address: Optional[str] = None
     operating_system: Optional[str] = None
-    status: AssetStatus
-    criticality: PriorityType
+    status: str
+    criticality: str
     last_scan: Optional[datetime] = None
 
 
 class AssetCreate(AssetBase):
-    client_id: UUID
+    client_id: int
 
 
 class AssetUpdate(BaseModel):
     name: Optional[str] = None
-    type_id: Optional[UUID] = None
+    type_id: Optional[int] = None
     ip_address: Optional[str] = None
     operating_system: Optional[str] = None
-    status: Optional[AssetStatus] = None
-    criticality: Optional[PriorityType] = None
+    status: Optional[str] = None
+    criticality: Optional[str] = None
     last_scan: Optional[datetime] = None
 
 
 class Asset(AssetBase, TimestampMixin):
-    id: UUID
-    client_id: UUID
+    id: int
+    client_id: int
     client: Optional[Client] = None
     type: Optional[AssetType] = None
     
@@ -252,11 +251,11 @@ class Asset(AssetBase, TimestampMixin):
 class VulnerabilityBase(BaseModel):
     title: str
     description: Optional[str] = None
-    asset_id: Optional[UUID] = None
-    asset_type_id: Optional[UUID] = None
-    scanner_id: Optional[UUID] = None
-    status: VulnStatus
-    criticality: PriorityType
+    asset_id: Optional[int] = None
+    asset_type_id: Optional[int] = None
+    scanner_id: Optional[int] = None
+    status: str
+    criticality: str
     cvss: Optional[float] = Field(None, ge=0, le=10)
     cve: Optional[str] = None
     discovered: Optional[date] = None
@@ -264,17 +263,17 @@ class VulnerabilityBase(BaseModel):
 
 
 class VulnerabilityCreate(VulnerabilityBase):
-    client_id: UUID
+    client_id: int
 
 
 class VulnerabilityUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    asset_id: Optional[UUID] = None
-    asset_type_id: Optional[UUID] = None
-    scanner_id: Optional[UUID] = None
-    status: Optional[VulnStatus] = None
-    criticality: Optional[PriorityType] = None
+    asset_id: Optional[int] = None
+    asset_type_id: Optional[int] = None
+    scanner_id: Optional[int] = None
+    status: Optional[str] = None
+    criticality: Optional[str] = None
     cvss: Optional[float] = Field(None, ge=0, le=10)
     cve: Optional[str] = None
     discovered: Optional[date] = None
@@ -282,8 +281,8 @@ class VulnerabilityUpdate(BaseModel):
 
 
 class Vulnerability(VulnerabilityBase, TimestampMixin):
-    id: UUID
-    client_id: UUID
+    id: int
+    client_id: int
     client: Optional[Client] = None
     asset: Optional[Asset] = None
     asset_type: Optional[AssetType] = None
@@ -298,13 +297,13 @@ class TicketMessageBase(BaseModel):
 
 
 class TicketMessageCreate(TicketMessageBase):
-    author_id: Optional[UUID] = None
+    author_id: Optional[int] = None
 
 
 class TicketMessage(TicketMessageBase, TimestampMixin):
-    id: UUID
-    ticket_id: UUID
-    author_id: Optional[UUID] = None
+    id: int
+    ticket_id: int
+    author_id: Optional[int] = None
     timestamp: datetime
     author: Optional[Worker] = None
     
@@ -315,34 +314,34 @@ class TicketMessage(TicketMessageBase, TimestampMixin):
 class TicketBase(BaseModel):
     title: str
     description: Optional[str] = None
-    priority: PriorityType
-    status: TicketStatus = TicketStatus.OPEN
-    assignee_id: Optional[UUID] = None
-    reporter_id: Optional[UUID] = None
+    priority: str
+    status: str = "Open"
+    assignee_id: Optional[int] = None
+    reporter_id: Optional[int] = None
     due_date: Optional[date] = None
     resolution: Optional[str] = None
 
 
 class TicketCreate(TicketBase):
-    client_id: UUID
-    vulnerability_ids: Optional[List[UUID]] = []
+    client_id: int
+    vulnerability_ids: Optional[List[int]] = []
 
 
 class TicketUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    priority: Optional[PriorityType] = None
-    status: Optional[TicketStatus] = None
-    assignee_id: Optional[UUID] = None
-    reporter_id: Optional[UUID] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assignee_id: Optional[int] = None
+    reporter_id: Optional[int] = None
     due_date: Optional[date] = None
     resolution: Optional[str] = None
-    vulnerability_ids: Optional[List[UUID]] = None
+    vulnerability_ids: Optional[List[int]] = None
 
 
 class Ticket(TicketBase, TimestampMixin):
-    id: UUID
-    client_id: UUID
+    id: int
+    client_id: int
     created_at: datetime
     client: Optional[Client] = None
     assignee: Optional[Worker] = None
@@ -361,7 +360,7 @@ class GanttTaskBase(BaseModel):
 
 
 class GanttTaskCreate(GanttTaskBase):
-    project_id: UUID
+    project_id: int
 
 
 class GanttTaskUpdate(BaseModel):
@@ -371,8 +370,8 @@ class GanttTaskUpdate(BaseModel):
 
 
 class GanttTask(GanttTaskBase, TimestampMixin):
-    id: UUID
-    project_id: UUID
+    id: int
+    project_id: int
     
     model_config = ConfigDict(from_attributes=True)
 

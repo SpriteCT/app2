@@ -4,7 +4,6 @@ API routes for vulnerabilities management
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from uuid import UUID
 
 from app.database import get_db
 from app.models import Vulnerability, Client, Asset, AssetType, Scanner
@@ -21,8 +20,8 @@ router = APIRouter(prefix="/vulnerabilities", tags=["vulnerabilities"])
 def get_vulnerabilities(
     skip: int = 0,
     limit: int = 100,
-    client_id: Optional[UUID] = None,
-    asset_id: Optional[UUID] = None,
+    client_id: Optional[int] = None,
+    asset_id: Optional[int] = None,
     status: Optional[str] = None,
     criticality: Optional[str] = None,
     db: Session = Depends(get_db)
@@ -42,7 +41,7 @@ def get_vulnerabilities(
 
 
 @router.get("/{vulnerability_id}", response_model=VulnerabilitySchema)
-def get_vulnerability(vulnerability_id: UUID, db: Session = Depends(get_db)):
+def get_vulnerability(vulnerability_id: int, db: Session = Depends(get_db)):
     """Get a specific vulnerability by ID"""
     vulnerability = db.query(Vulnerability).filter(Vulnerability.id == vulnerability_id).first()
     if not vulnerability:
@@ -100,7 +99,7 @@ def create_vulnerability(vulnerability: VulnerabilityCreate, db: Session = Depen
 
 @router.put("/{vulnerability_id}", response_model=VulnerabilitySchema)
 def update_vulnerability(
-    vulnerability_id: UUID,
+    vulnerability_id: int,
     vulnerability_update: VulnerabilityUpdate,
     db: Session = Depends(get_db)
 ):
@@ -147,7 +146,7 @@ def update_vulnerability(
 
 
 @router.delete("/{vulnerability_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_vulnerability(vulnerability_id: UUID, db: Session = Depends(get_db)):
+def delete_vulnerability(vulnerability_id: int, db: Session = Depends(get_db)):
     """Delete a vulnerability"""
     db_vulnerability = db.query(Vulnerability).filter(Vulnerability.id == vulnerability_id).first()
     if not db_vulnerability:

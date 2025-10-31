@@ -4,15 +4,15 @@ Database connection and session management
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from pydantic_settings import BaseSettings
+import os
 
 
-class Settings(BaseSettings):
-    database_url: str = "postgresql://user:password@localhost:5432/vulnerability_db"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+class Settings:
+    """Application settings"""
+    database_url: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql://user:password@localhost:5432/vulnerability_db"
+    )
 
 
 settings = Settings()

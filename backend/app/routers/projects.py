@@ -3,8 +3,7 @@ API routes for projects management
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
-from uuid import UUID
+from typing import List, Optional
 
 from app.database import get_db
 from app.models import Project, ProjectTeamMember, Client
@@ -21,7 +20,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 def get_projects(
     skip: int = 0,
     limit: int = 100,
-    client_id: UUID = None,
+    client_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     """Get all projects, optionally filtered by client"""
@@ -33,7 +32,7 @@ def get_projects(
 
 
 @router.get("/{project_id}", response_model=ProjectSchema)
-def get_project(project_id: UUID, db: Session = Depends(get_db)):
+def get_project(project_id: int, db: Session = Depends(get_db)):
     """Get a specific project by ID"""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -76,7 +75,7 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
 
 @router.put("/{project_id}", response_model=ProjectSchema)
 def update_project(
-    project_id: UUID,
+    project_id: int,
     project_update: ProjectUpdate,
     db: Session = Depends(get_db)
 ):
@@ -114,7 +113,7 @@ def update_project(
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: UUID, db: Session = Depends(get_db)):
+def delete_project(project_id: int, db: Session = Depends(get_db)):
     """Delete a project"""
     db_project = db.query(Project).filter(Project.id == project_id).first()
     if not db_project:

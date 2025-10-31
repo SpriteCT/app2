@@ -1,7 +1,6 @@
 -- PostgreSQL DDL for normalized application schema
 -- Requires: PostgreSQL 13+
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto; -- for gen_random_uuid()
+-- All IDs use SERIAL (auto-incrementing INTEGER) instead of UUID
 
 -- ============ ENUM TYPES ============
 DO $$ BEGIN
@@ -44,7 +43,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Workers (executors/assignees)
 CREATE TABLE IF NOT EXISTS workers (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id         SERIAL PRIMARY KEY,
   full_name  TEXT NOT NULL,
   email      TEXT,
   phone      TEXT,
@@ -54,7 +53,7 @@ CREATE TABLE IF NOT EXISTS workers (
 
 -- Asset Types (reference table)
 CREATE TABLE IF NOT EXISTS asset_types (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          SERIAL PRIMARY KEY,
   name        TEXT NOT NULL UNIQUE,
   description TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -63,7 +62,7 @@ CREATE TABLE IF NOT EXISTS asset_types (
 
 -- Scanners (reference table)
 CREATE TABLE IF NOT EXISTS scanners (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          SERIAL PRIMARY KEY,
   name        TEXT NOT NULL UNIQUE,
   description TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -71,7 +70,7 @@ CREATE TABLE IF NOT EXISTS scanners (
 );
 
 CREATE TABLE IF NOT EXISTS clients (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                SERIAL PRIMARY KEY,
   name              TEXT NOT NULL,
   short_name        TEXT NOT NULL,
   industry          TEXT,
@@ -95,8 +94,8 @@ CREATE TABLE IF NOT EXISTS clients (
 );
 
 CREATE TABLE IF NOT EXISTS client_additional_contacts (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id  UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  id         SERIAL PRIMARY KEY,
+  client_id  INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   name       TEXT NOT NULL,
   role       TEXT,
   phone      TEXT,
@@ -108,8 +107,8 @@ CREATE TABLE IF NOT EXISTS client_additional_contacts (
 CREATE INDEX IF NOT EXISTS idx_client_additional_contacts_client ON client_additional_contacts(client_id);
 
 CREATE TABLE IF NOT EXISTS projects (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id    UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  id           SERIAL PRIMARY KEY,
+  client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   name         TEXT NOT NULL,
   description  TEXT,
   type         project_type NOT NULL,
@@ -130,9 +129,9 @@ CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id);
 -- project_deliverables table removed
 
 CREATE TABLE IF NOT EXISTS project_team_members (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id  UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  worker_id   UUID NOT NULL REFERENCES workers(id) ON DELETE RESTRICT,
+  id          SERIAL PRIMARY KEY,
+  project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  worker_id   INTEGER NOT NULL REFERENCES workers(id) ON DELETE RESTRICT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT uq_project_team_member UNIQUE(project_id, worker_id)
@@ -141,10 +140,10 @@ CREATE INDEX IF NOT EXISTS idx_project_team_members_project ON project_team_memb
 CREATE INDEX IF NOT EXISTS idx_project_team_members_worker ON project_team_members(worker_id);
 
 CREATE TABLE IF NOT EXISTS assets (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id         UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+  id                SERIAL PRIMARY KEY,
+  client_id         INTEGER NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   name              TEXT NOT NULL,
-  type_id           UUID NOT NULL REFERENCES asset_types(id) ON DELETE RESTRICT,
+  type_id           INTEGER NOT NULL REFERENCES asset_types(id) ON DELETE RESTRICT,
   ip_address        TEXT,
   operating_system  TEXT,
   status            asset_status NOT NULL,
@@ -158,13 +157,13 @@ CREATE INDEX IF NOT EXISTS idx_assets_client ON assets(client_id);
 CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(type_id);
 
 CREATE TABLE IF NOT EXISTS vulnerabilities (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id      UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
-  asset_id       UUID REFERENCES assets(id) ON DELETE SET NULL,
+  id             SERIAL PRIMARY KEY,
+  client_id      INTEGER NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+  asset_id       INTEGER REFERENCES assets(id) ON DELETE SET NULL,
   title          TEXT NOT NULL,
   description    TEXT,
-  asset_type_id  UUID REFERENCES asset_types(id) ON DELETE SET NULL,
-  scanner_id     UUID REFERENCES scanners(id) ON DELETE SET NULL,
+  asset_type_id  INTEGER REFERENCES asset_types(id) ON DELETE SET NULL,
+  scanner_id     INTEGER REFERENCES scanners(id) ON DELETE SET NULL,
   status         vuln_status NOT NULL,
   criticality    priority_type NOT NULL,
   cvss           NUMERIC CHECK (cvss IS NULL OR (cvss >= 0 AND cvss <= 10)),
@@ -184,12 +183,12 @@ CREATE INDEX IF NOT EXISTS idx_vulns_scanner ON vulnerabilities(scanner_id);
 -- vulnerability_tags table removed
 
 CREATE TABLE IF NOT EXISTS tickets (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id    UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+  id           SERIAL PRIMARY KEY,
+  client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   title        TEXT NOT NULL,
   description  TEXT,
-  assignee_id  UUID REFERENCES workers(id) ON DELETE SET NULL,
-  reporter_id  UUID REFERENCES workers(id) ON DELETE SET NULL,
+  assignee_id  INTEGER REFERENCES workers(id) ON DELETE SET NULL,
+  reporter_id  INTEGER REFERENCES workers(id) ON DELETE SET NULL,
   priority     priority_type NOT NULL,
   status       ticket_status NOT NULL DEFAULT 'Open',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -204,9 +203,9 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_tickets_reporter ON tickets(reporter_id);
 
 CREATE TABLE IF NOT EXISTS ticket_messages (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_id  UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-  author_id  UUID REFERENCES workers(id) ON DELETE SET NULL,
+  id         SERIAL PRIMARY KEY,
+  ticket_id  INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  author_id  INTEGER REFERENCES workers(id) ON DELETE SET NULL,
   timestamp  TIMESTAMPTZ NOT NULL DEFAULT now(),
   message    TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -216,8 +215,8 @@ CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON ticket_messages(ticket_
 CREATE INDEX IF NOT EXISTS idx_ticket_messages_author ON ticket_messages(author_id);
 
 CREATE TABLE IF NOT EXISTS ticket_vulnerabilities (
-  ticket_id        UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-  vulnerability_id UUID NOT NULL REFERENCES vulnerabilities(id) ON DELETE CASCADE,
+  ticket_id        INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  vulnerability_id INTEGER NOT NULL REFERENCES vulnerabilities(id) ON DELETE CASCADE,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (ticket_id, vulnerability_id)
 );
@@ -225,8 +224,8 @@ CREATE TABLE IF NOT EXISTS ticket_vulnerabilities (
 -- gantt header table removed; only gantt_tasks per project
 
 CREATE TABLE IF NOT EXISTS gantt_tasks (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id   UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  id           SERIAL PRIMARY KEY,
+  project_id   INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name         TEXT NOT NULL,
   start_date   DATE NOT NULL,
   end_date     DATE NOT NULL,

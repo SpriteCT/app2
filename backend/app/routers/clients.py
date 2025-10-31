@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List
-from uuid import UUID
 
 from app.database import get_db
 from app.models import Client, ClientAdditionalContact
@@ -28,12 +27,13 @@ def get_clients(
     db: Session = Depends(get_db)
 ):
     """Get all clients"""
-    clients = db.query(Client).offset(skip).limit(limit).all()
+    from sqlalchemy.orm import joinedload
+    clients = db.query(Client).options(joinedload(Client.additional_contacts)).offset(skip).limit(limit).all()
     return clients
 
 
 @router.get("/{client_id}", response_model=ClientSchema)
-def get_client(client_id: UUID, db: Session = Depends(get_db)):
+def get_client(client_id: int, db: Session = Depends(get_db)):
     """Get a specific client by ID"""
     client = db.query(Client).filter(Client.id == client_id).first()
     if not client:
@@ -67,7 +67,7 @@ def create_client(client: ClientCreate, db: Session = Depends(get_db)):
 
 @router.put("/{client_id}", response_model=ClientSchema)
 def update_client(
-    client_id: UUID,
+    client_id: int,
     client_update: ClientUpdate,
     db: Session = Depends(get_db)
 ):
@@ -89,7 +89,7 @@ def update_client(
 
 
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_client(client_id: UUID, db: Session = Depends(get_db)):
+def delete_client(client_id: int, db: Session = Depends(get_db)):
     """Delete a client"""
     db_client = db.query(Client).filter(Client.id == client_id).first()
     if not db_client:
@@ -106,7 +106,7 @@ def delete_client(client_id: UUID, db: Session = Depends(get_db)):
 # Additional Contacts routes
 @router.post("/{client_id}/contacts", response_model=ContactSchema, status_code=status.HTTP_201_CREATED)
 def create_client_contact(
-    client_id: UUID,
+    client_id: int,
     contact: ClientAdditionalContactCreate,
     db: Session = Depends(get_db)
 ):
@@ -128,8 +128,8 @@ def create_client_contact(
 
 @router.put("/{client_id}/contacts/{contact_id}", response_model=ContactSchema)
 def update_client_contact(
-    client_id: UUID,
-    contact_id: UUID,
+    client_id: int,
+    contact_id: int,
     contact_update: ClientAdditionalContactUpdate,
     db: Session = Depends(get_db)
 ):
@@ -155,8 +155,8 @@ def update_client_contact(
 
 @router.delete("/{client_id}/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_client_contact(
-    client_id: UUID,
-    contact_id: UUID,
+    client_id: int,
+    contact_id: int,
     db: Session = Depends(get_db)
 ):
     """Delete an additional contact"""

@@ -4,7 +4,6 @@ API routes for assets management
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from uuid import UUID
 
 from app.database import get_db
 from app.models import Asset, Client, AssetType
@@ -21,8 +20,8 @@ router = APIRouter(prefix="/assets", tags=["assets"])
 def get_assets(
     skip: int = 0,
     limit: int = 100,
-    client_id: Optional[UUID] = None,
-    type_id: Optional[UUID] = None,
+    client_id: Optional[int] = None,
+    type_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     """Get all assets, optionally filtered by client or type"""
@@ -36,7 +35,7 @@ def get_assets(
 
 
 @router.get("/{asset_id}", response_model=AssetSchema)
-def get_asset(asset_id: UUID, db: Session = Depends(get_db)):
+def get_asset(asset_id: int, db: Session = Depends(get_db)):
     """Get a specific asset by ID"""
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
     if not asset:
@@ -75,7 +74,7 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
 
 @router.put("/{asset_id}", response_model=AssetSchema)
 def update_asset(
-    asset_id: UUID,
+    asset_id: int,
     asset_update: AssetUpdate,
     db: Session = Depends(get_db)
 ):
@@ -106,7 +105,7 @@ def update_asset(
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_asset(asset_id: UUID, db: Session = Depends(get_db)):
+def delete_asset(asset_id: int, db: Session = Depends(get_db)):
     """Delete an asset"""
     db_asset = db.query(Asset).filter(Asset.id == asset_id).first()
     if not db_asset:
