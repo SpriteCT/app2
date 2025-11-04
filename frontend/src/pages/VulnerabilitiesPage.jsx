@@ -6,6 +6,8 @@ import { transformVulnerability, transformAsset, transformTicket, transformVulne
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
 import CreateTicketModal from '../components/CreateTicketModal'
 import TicketDetailModal from '../components/TicketDetailModal'
+import AddVulnerabilityModal from '../components/AddVulnerabilityModal'
+import EditVulnerabilityModal from '../components/EditVulnerabilityModal'
 
 const VulnerabilitiesPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -347,304 +349,42 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
       />
 
       {/* Add Vulnerability Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
-            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Добавить уязвимость вручную</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Название</label>
-                <input
-                  type="text"
-                  value={newVuln.title}
-                  onChange={(e) => setNewVuln({ ...newVuln, title: e.target.value })}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Введите название уязвимости"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
-                  <select 
-                    value={newVuln.clientId} 
-                    onChange={(e) => setNewVuln({ ...newVuln, clientId: e.target.value ? parseInt(e.target.value) : '' })}
-                    className="w-full px-3 py-2 bg-dark-card border border-dark-border text-white rounded"
-                  >
-                    <option value="">— выберите клиента —</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Актив</label>
-                  <div className="space-y-2">
-                    <input type="text" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} placeholder="Поиск по активу..." className="w-full px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
-                    <select 
-                      value={newVuln.assetId || ''} 
-                      onChange={(e) => setNewVuln({ ...newVuln, assetId: e.target.value ? parseInt(e.target.value) : null })}
-                      className="w-full px-3 py-2 bg-dark-card border border-dark-border text-white rounded"
-                    >
-                      <option value="">— выберите актив —</option>
-                      {filteredAssets.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
-                  <select 
-                    value={newVuln.criticality}
-                    onChange={(e) => setNewVuln({ ...newVuln, criticality: e.target.value })}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">CVSS</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    max="10"
-                    min="0"
-                    value={newVuln.cvss || ''}
-                    onChange={(e) => setNewVuln({ ...newVuln, cvss: e.target.value ? parseFloat(e.target.value) : null })}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="7.5"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">CVE</label>
-                <input 
-                  type="text" 
-                  value={newVuln.cve}
-                  onChange={(e) => setNewVuln({ ...newVuln, cve: e.target.value })}
-                  placeholder="CVE-2021-44228" 
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-                />
-              </div>
-
-              <div>
-
-                <label className="text-sm text-gray-400 mb-2 block">Сканер</label>
-                <select 
-                  value={newVuln.scannerId || ''}
-                  onChange={(e) => setNewVuln({ ...newVuln, scannerId: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                >
-                  <option value="">— выберите сканер —</option>
-                  {scanners.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
-                <textarea
-                  rows="4"
-                  value={newVuln.description}
-                  onChange={(e) => setNewVuln({ ...newVuln, description: e.target.value })}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Подробное описание уязвимости..."
-                />
-              </div>
-
-              {/* assignee removed in add form */}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={async () => {
-                    // Validation
-                    if (!newVuln.title || !newVuln.title.trim()) {
-                      alert('Пожалуйста, укажите название уязвимости')
-                      return
-                    }
-                    if (!newVuln.clientId) {
-                      alert('Пожалуйста, выберите клиента')
-                      return
-                    }
-                    
-                    // Валидация CVSS
-                    if (newVuln.cvss !== null && newVuln.cvss !== undefined && newVuln.cvss !== '') {
-                      const cvssValue = parseFloat(newVuln.cvss)
-                      if (isNaN(cvssValue) || cvssValue < 0 || cvssValue > 10) {
-                        alert('CVSS должен быть числом от 0 до 10')
-                        return
-                      }
-                    }
-                    
-                    try {
-                      const backendData = transformVulnerabilityToBackend(newVuln)
-                      console.log('Sending vulnerability data:', backendData)
-                      const created = await vulnerabilitiesApi.create(backendData)
-                      const transformed = transformVulnerability(created)
-                      setVulns(prev => [transformed, ...prev])
-                      setShowAddModal(false)
-                      setNewVuln({
-                        title: '',
-                        clientId: '',
-                        assetId: null,
-                        scannerId: null,
-                        criticality: 'High',
-                        status: 'Open',
-                        cvss: null,
-                        cve: '',
-                        description: '',
-                      })
-                    } catch (error) {
-                      console.error('Failed to create vulnerability:', error)
-                      alert(`Ошибка при создании уязвимости: ${error.message}`)
-                    }
-                  }}
-                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
-                >
-                  Добавить уязвимость
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddVulnerabilityModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false)
+          setNewVuln({
+            title: '',
+            clientId: '',
+            assetId: null,
+            scannerId: null,
+            criticality: 'High',
+            status: 'Open',
+            cvss: null,
+            cve: '',
+            description: '',
+          })
+          setAssetSearch('')
+        }}
+        onCreate={(transformed) => {
+          setVulns(prev => [transformed, ...prev])
+        }}
+        clients={clients}
+        assets={assets}
+        scanners={scanners}
+      />
 
       {/* Edit Vulnerability Modal */}
-      {showEditModal && editVuln && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
-            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Редактировать уязвимость</h2>
-              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Название</label>
-                <input type="text" value={editVuln.title} onChange={(e) => setEditVuln({ ...editVuln, title: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Актив</label>
-                  <select 
-                    value={editVuln.assetId || ''} 
-                    onChange={(e) => setEditVuln({ ...editVuln, assetId: e.target.value ? parseInt(e.target.value) : null })}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option value="">— выберите актив —</option>
-                    {assets.filter(a => !editVuln.clientId || String(a.clientId) === String(editVuln.clientId)).map(a => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
-                  <select value={editVuln.criticality} onChange={(e) => setEditVuln({ ...editVuln, criticality: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">CVSS</label>
-                  <input type="number" min="0" max="10" step="0.1" value={editVuln.cvss} onChange={(e) => {
-                    const val = parseFloat(e.target.value)
-                    if (!isNaN(val) && val >= 0 && val <= 10) {
-                      setEditVuln({ ...editVuln, cvss: val })
-                    } else if (e.target.value === '') {
-                      setEditVuln({ ...editVuln, cvss: '' })
-                    }
-                  }} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">CVE</label>
-                <input type="text" value={editVuln.cve || ''} onChange={(e) => setEditVuln({ ...editVuln, cve: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Статус</label>
-                  <select value={editVuln.status} onChange={(e) => setEditVuln({ ...editVuln, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option>Open</option>
-                    <option>In Progress</option>
-                    <option>Fixed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Сканер</label>
-                  <select 
-                    value={editVuln.scannerId || ''} 
-                    onChange={(e) => setEditVuln({ ...editVuln, scannerId: e.target.value ? parseInt(e.target.value) : null })} 
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option value="">— выберите сканер —</option>
-                    {scanners.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Обнаружена</label>
-                  <input type="date" value={editVuln.discovered} onChange={(e) => setEditVuln({ ...editVuln, discovered: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Изменена</label>
-                  <input type="date" value={editVuln.lastModified} onChange={(e) => setEditVuln({ ...editVuln, lastModified: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-              </div>
-              {/* assignee removed in edit form */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
-                <textarea rows="4" value={editVuln.description} onChange={(e) => setEditVuln({ ...editVuln, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
-                <button onClick={async () => {
-                  try {
-                    const backendData = transformVulnerabilityToBackend(editVuln)
-                    const updated = await vulnerabilitiesApi.update(editVuln.id, backendData)
-                    const transformed = transformVulnerability(updated)
-                    setVulns(prev => prev.map(x => x.id === transformed.id ? transformed : x))
-                    setShowEditModal(false)
-                  } catch (error) {
-                    console.error('Failed to update vulnerability:', error)
-                    alert('Ошибка при обновлении уязвимости')
-                  }
-                }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditVulnerabilityModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onUpdate={(transformed) => {
+          setVulns(prev => prev.map(x => x.id === transformed.id ? transformed : x))
+        }}
+        vulnerability={editVuln}
+        assets={assets}
+        scanners={scanners}
+      />
 
       {/* Import Modal */}
       {showImportModal && (

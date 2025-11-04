@@ -45,7 +45,6 @@ const CreateProjectModal = ({
         teamMemberIds: [],
       }
       const backendData = transformProjectToBackend(projectData)
-      console.log('Sending project data:', backendData)
       const created = await projectsApi.create(backendData)
       const transformed = transformProject(created)
       onCreate(transformed)

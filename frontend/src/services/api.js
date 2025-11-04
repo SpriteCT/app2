@@ -58,7 +58,6 @@ async function apiRequest(endpoint, options = {}) {
 
     return null
   } catch (error) {
-    console.error(`API request failed: ${endpoint}`, error)
     throw error
   }
 }

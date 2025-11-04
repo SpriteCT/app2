@@ -14,6 +14,8 @@ import { assetsApi, vulnerabilitiesApi, ticketsApi, clientsApi, referenceApi } f
 import { transformAsset, transformAssetToBackend, transformVulnerability, transformTicket } from '../utils/dataTransform'
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
 import TicketDetailModal from '../components/TicketDetailModal'
+import AddAssetModal from '../components/AddAssetModal'
+import EditAssetModal from '../components/EditAssetModal'
 
 const AssetsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -37,16 +39,6 @@ const AssetsPage = ({ selectedClient }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState(null)
   
-  // New asset form state
-  const [newAsset, setNewAsset] = useState({
-    name: '',
-    typeId: '',
-    ipAddress: '',
-    operatingSystem: '',
-    status: 'В эксплуатации',
-    criticality: 'High',
-    clientId: ''
-  })
 
   // Load data from API
   useEffect(() => {
@@ -498,243 +490,26 @@ const AssetsPage = ({ selectedClient }) => {
       )}
 
       {/* Add Asset Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
-            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Добавить актив</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Имя актива</label>
-                <input
-                  type="text"
-                  value={newAsset.name}
-                  onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="server.example.com"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Тип</label>
-                  <select 
-                    value={newAsset.typeId} 
-                    onChange={(e) => setNewAsset({ ...newAsset, typeId: e.target.value ? parseInt(e.target.value) : '' })} 
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option value="">— выберите тип —</option>
-                    {assetTypes.map(type => (
-                      <option key={type.id} value={type.id}>{type.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">IP Адрес</label>
-                  <input
-                    type="text"
-                    value={newAsset.ipAddress}
-                    onChange={(e) => setNewAsset({ ...newAsset, ipAddress: e.target.value })}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="192.168.1.10"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
-                  <select 
-                    value={newAsset.criticality} 
-                    onChange={(e) => setNewAsset({ ...newAsset, criticality: e.target.value })} 
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Статус</label>
-                  <select 
-                    value={newAsset.status} 
-                    onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })} 
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option>В эксплуатации</option>
-                    <option>Недоступен</option>
-                    <option>В обслуживании</option>
-                    <option>Выведен из эксплуатации</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">ОС</label>
-                  <input
-                    type="text"
-                    value={newAsset.operatingSystem}
-                    onChange={(e) => setNewAsset({ ...newAsset, operatingSystem: e.target.value })}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                    placeholder="Ubuntu 22.04"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
-                  <select 
-                    value={newAsset.clientId} 
-                    onChange={(e) => setNewAsset({ ...newAsset, clientId: e.target.value ? parseInt(e.target.value) : '' })} 
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option value="">— выберите клиента —</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Project removed by schema alignment */}
-                {/* Department removed by schema alignment */}
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!newAsset.name || !newAsset.typeId || !newAsset.clientId) {
-                      alert('Заполните все обязательные поля: имя, тип и клиент')
-                      return
-                    }
-                    
-                    try {
-                      const backendData = transformAssetToBackend(newAsset)
-                      const created = await assetsApi.create(backendData)
-                      const transformed = transformAsset(created)
-                      setAssets(prev => [...prev, transformed])
-                      setShowAddModal(false)
-                      setNewAsset({
-                        name: '',
-                        typeId: '',
-                        ipAddress: '',
-                        operatingSystem: '',
-                        status: 'В эксплуатации',
-                        criticality: 'High',
-                        clientId: ''
-                      })
-                    } catch (error) {
-                      console.error('Failed to create asset:', error)
-                      alert('Ошибка при создании актива: ' + (error.message || 'Неизвестная ошибка'))
-                    }
-                  }}
-                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
-                >
-                  Добавить актив
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddAssetModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onCreate={(transformed) => {
+          setAssets(prev => [...prev, transformed])
+        }}
+        clients={clients}
+        assetTypes={assetTypes}
+      />
 
       {/* Edit Asset Modal */}
-      {showEditAssetModal && editAsset && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
-            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Редактировать актив</h2>
-              <button onClick={() => setShowEditAssetModal(false)} className="text-gray-400 hover:text-white transition-colors">✕</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Имя актива</label>
-                <input type="text" value={editAsset.name} onChange={(e) => setEditAsset({ ...editAsset, name: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Тип</label>
-                  <select value={editAsset.typeId || ''} onChange={(e) => setEditAsset({ ...editAsset, typeId: e.target.value ? parseInt(e.target.value) : '' })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option value="">— выберите тип —</option>
-                    {assetTypes.map(type => (
-                      <option key={type.id} value={type.id}>{type.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">IP Адрес</label>
-                  <input type="text" value={editAsset.ipAddress} onChange={(e) => setEditAsset({ ...editAsset, ipAddress: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
-                  <select value={editAsset.criticality} onChange={(e) => setEditAsset({ ...editAsset, criticality: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Статус</label>
-                  <select value={editAsset.status} onChange={(e) => setEditAsset({ ...editAsset, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option>В эксплуатации</option>
-                    <option>Недоступен</option>
-                    <option>В обслуживании</option>
-                    <option>Выведен из эксплуатации</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">ОС</label>
-                  <input type="text" value={editAsset.operatingSystem} onChange={(e) => setEditAsset({ ...editAsset, operatingSystem: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Последнее сканирование</label>
-                  <input 
-                    type="date" 
-                    value={editAsset.lastScan ? new Date(editAsset.lastScan).toISOString().slice(0, 10) : ''} 
-                    onChange={(e) => setEditAsset({ ...editAsset, lastScan: e.target.value ? new Date(e.target.value + 'T00:00:00').toISOString() : null })} 
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setShowEditAssetModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
-                <button onClick={async () => { 
-                  try {
-                    const backendData = transformAssetToBackend(editAsset)
-                    const updated = await assetsApi.update(editAsset.id, backendData)
-                    const transformed = transformAsset(updated)
-                    setAssets(prev => prev.map(a => a.id === editAsset.id ? transformed : a))
-                    setShowEditAssetModal(false)
-                  } catch (error) {
-                    console.error('Failed to update asset:', error)
-                    alert('Ошибка при обновлении актива: ' + (error.message || 'Неизвестная ошибка'))
-                  }
-                }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditAssetModal
+        isOpen={showEditAssetModal}
+        onClose={() => setShowEditAssetModal(false)}
+        onUpdate={(transformed) => {
+          setAssets(prev => prev.map(a => a.id === transformed.id ? transformed : a))
+        }}
+        asset={editAsset}
+        assetTypes={assetTypes}
+      />
 
       {/* Import Modal */}
       {showImportModal && (
