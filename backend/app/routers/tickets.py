@@ -4,9 +4,11 @@ API routes for tickets management
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Ticket, TicketVulnerability, TicketMessage, Client, Vulnerability
+from app.utils import get_ticket_display_id
 from app.schemas import (
     Ticket as TicketSchema,
     TicketCreate,
@@ -29,7 +31,16 @@ def get_tickets(
     db: Session = Depends(get_db)
 ):
     """Get all tickets, optionally filtered"""
-    query = db.query(Ticket)
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import or_
+    # Filter out deleted tickets - check both False and NULL
+    query = db.query(Ticket).filter(or_(Ticket.is_deleted == False, Ticket.is_deleted.is_(None))).options(
+        joinedload(Ticket.ticket_vulnerabilities).joinedload(TicketVulnerability.vulnerability),
+        joinedload(Ticket.messages).joinedload(TicketMessage.author),
+        joinedload(Ticket.assignee),
+        joinedload(Ticket.reporter),
+        joinedload(Ticket.client)
+    )
     if client_id:
         query = query.filter(Ticket.client_id == client_id)
     if status:
@@ -37,6 +48,14 @@ def get_tickets(
     if priority:
         query = query.filter(Ticket.priority == priority)
     tickets = query.offset(skip).limit(limit).all()
+    print(f"Found {len(tickets)} tickets in database")
+    # Ensure vulnerabilities are loaded for each ticket
+    for ticket in tickets:
+        # Force loading of relationships
+        _ = ticket.ticket_vulnerabilities
+        _ = ticket.messages
+        _ = ticket.vulnerabilities  # Access property to trigger loading
+        print(f"Ticket {ticket.id} ({ticket.display_id}): is_deleted={ticket.is_deleted}, client_id={ticket.client_id}")
     return tickets
 
 
@@ -44,7 +63,7 @@ def get_tickets(
 def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
     """Get a specific ticket by ID"""
     from sqlalchemy.orm import joinedload
-    ticket = db.query(Ticket).options(
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id, Ticket.is_deleted == False).options(
         joinedload(Ticket.ticket_vulnerabilities).joinedload(TicketVulnerability.vulnerability),
         joinedload(Ticket.messages).joinedload(TicketMessage.author),
         joinedload(Ticket.assignee),
@@ -73,9 +92,28 @@ def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
         )
     
     ticket_data = ticket.model_dump(exclude={"vulnerability_ids"})
+    # Remove id if present
+    ticket_data.pop('id', None)
+    # Generate display_id
+    ticket_data['display_id'] = get_ticket_display_id(client, db)
     db_ticket = Ticket(**ticket_data)
     db.add(db_ticket)
-    db.flush()
+    
+    try:
+        db.flush()
+    except Exception as e:
+        # If we get an ID conflict, fix the sequence and retry once
+        if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+            from sqlalchemy import text
+            # Fix the sequence
+            db.execute(text("SELECT setval('tickets_id_seq', (SELECT MAX(id) FROM tickets), true)"))
+            db.commit()
+            # Retry the insert
+            db_ticket = Ticket(**ticket_data)
+            db.add(db_ticket)
+            db.flush()
+        else:
+            raise
     
     # Add vulnerabilities
     if ticket.vulnerability_ids:
@@ -119,8 +157,37 @@ def update_ticket(
         )
     
     update_data = ticket_update.model_dump(exclude_unset=True, exclude={"vulnerability_ids"})
+    
+    # Validate due_date if provided
+    if "due_date" in update_data and update_data["due_date"] is not None:
+        if update_data["due_date"] < db_ticket.created_at.date():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Due date cannot be earlier than creation date"
+            )
+    
+    status_changed = False
+    old_status = db_ticket.status
+    
     for field, value in update_data.items():
+        if field == 'status' and value != old_status:
+            status_changed = True
         setattr(db_ticket, field, value)
+    
+    # If status changed, update related vulnerabilities
+    if status_changed and db_ticket.status:
+        # Get all vulnerabilities linked to this ticket
+        ticket_vulns = db.query(TicketVulnerability).filter(
+            TicketVulnerability.ticket_id == ticket_id
+        ).all()
+        
+        for ticket_vuln in ticket_vulns:
+            vulnerability = db.query(Vulnerability).filter(
+                Vulnerability.id == ticket_vuln.vulnerability_id
+            ).first()
+            if vulnerability:
+                vulnerability.status = db_ticket.status
+                vulnerability.updated_at = datetime.now(timezone.utc)
     
     # Update vulnerabilities if provided
     if "vulnerability_ids" in ticket_update.model_dump(exclude_unset=True):
@@ -149,6 +216,9 @@ def update_ticket(
                     vulnerability_id=vuln_id
                 )
                 db.add(db_ticket_vuln)
+        
+        # Update ticket's updated_at when vulnerabilities are changed
+        db_ticket.updated_at = datetime.now(timezone.utc)
     
     db.commit()
     db.refresh(db_ticket)
@@ -157,15 +227,17 @@ def update_ticket(
 
 @router.delete("/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
-    """Delete a ticket"""
-    db_ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    """Soft delete a ticket"""
+    from datetime import datetime, timezone
+    db_ticket = db.query(Ticket).filter(Ticket.id == ticket_id, Ticket.is_deleted == False).first()
     if not db_ticket:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ticket not found"
         )
     
-    db.delete(db_ticket)
+    db_ticket.is_deleted = True
+    db_ticket.updated_at = datetime.now(timezone.utc)
     db.commit()
     return None
 
@@ -188,6 +260,11 @@ def create_ticket_message(
     
     db_message = TicketMessage(ticket_id=ticket_id, **message.model_dump())
     db.add(db_message)
+    
+    # Update ticket's updated_at when message is added
+    from datetime import datetime, timezone
+    ticket.updated_at = datetime.now(timezone.utc)
+    
     db.commit()
     db.refresh(db_message)
     return db_message

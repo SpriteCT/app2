@@ -14,6 +14,7 @@ from app.routers import (
     reference,
     gantt
 )
+from app.init_db import ensure_sequences_fixed
 
 # Create database tables (only if they don't exist)
 # In production, use migrations or schema.sql in Docker
@@ -24,6 +25,26 @@ app = FastAPI(
     description="API for managing vulnerabilities, tickets, assets, clients and projects",
     version="1.0.0"
 )
+
+# Ensure sequences are synchronized on startup
+@app.on_event("startup")
+async def startup_event():
+    """Fix database sequences on application startup"""
+    import time
+    max_retries = 10
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            ensure_sequences_fixed()
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"Database not ready yet (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                print(f"Warning: Could not synchronize sequences after {max_retries} attempts: {e}")
+                # Don't fail startup, just log the warning
 
 # CORS middleware for frontend
 app.add_middleware(

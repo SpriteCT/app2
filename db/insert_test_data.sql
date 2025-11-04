@@ -84,25 +84,26 @@ INSERT INTO assets (id, client_id, name, type_id, ip_address, operating_system, 
 (10, 1, 'old-web-server.legacy', 1, '192.168.1.255', 'CentOS 6', 'Выведен из эксплуатации', 'Low', '2023-06-15 16:00:00+00');
 
 -- ============ VULNERABILITIES ============
-INSERT INTO vulnerabilities (id, client_id, asset_id, title, description, asset_type_id, scanner_id, status, criticality, cvss, cve, discovered, last_modified) VALUES
-(1, 1, 1, 'SQL Injection в параметре поиска', 'Обнаружена уязвимость SQL Injection в параметре поиска', 1, 1, 'Open', 'Critical', 9.8, 'CVE-2023-1234', '2024-01-15', '2024-01-20'),
-(2, 1, 2, 'Устаревшая версия Apache Tomcat', 'Используется Apache Tomcat версии 8.5.29, уязвимая к CVE-2023-45133', 2, 2, 'In Progress', 'High', 7.5, 'CVE-2023-45133', '2024-01-10', '2024-01-22'),
-(3, 3, 3, 'Слабая политика паролей', 'Обнаружены слабые пароли у нескольких учетных записей', 3, 3, 'Fixed', 'Medium', 5.3, NULL, '2024-01-05', '2024-01-18'),
-(4, 4, 4, 'Открытые порты 445/139 (SMB)', 'SMB порты доступны из внешней сети', 4, 1, 'Open', 'High', 8.8, NULL, '2024-01-12', '2024-01-19'),
-(5, 5, 5, 'Missing Security Headers', 'Отсутствуют заголовки безопасности X-Frame-Options, CSP', 5, 2, 'Open', 'Low', 2.5, NULL, '2024-01-14', '2024-01-21'),
-(6, 6, 6, 'Уязвимость в библиотеке Log4j', 'Log4j версия 2.14.0 уязвима к CVE-2021-44228', 6, 1, 'Open', 'Critical', 10.0, 'CVE-2021-44228', '2024-01-08', '2024-01-20'),
-(7, 2, 7, 'SSRF в функционале загрузки', 'Обнаружена Server-Side Request Forgery уязвимость', 5, 3, 'Verified', 'High', 7.8, NULL, '2024-01-11', '2024-01-17'),
-(8, 3, 8, 'Несвоевременное обновление системных компонентов', 'Накоплено 15 критических обновлений', 7, 2, 'Open', 'Medium', 4.5, NULL, '2024-01-13', '2024-01-19');
+INSERT INTO vulnerabilities (id, display_id, client_id, asset_id, title, description, asset_type_id, scanner_id, status, criticality, cvss, cve, discovered, last_modified, is_deleted) VALUES
+(1, 'V-TSV-1', 1, 1, 'SQL Injection в параметре поиска', 'Обнаружена уязвимость SQL Injection в параметре поиска', 1, 1, 'Open', 'Critical', 9.8, 'CVE-2023-1234', '2024-01-15', '2024-01-20', FALSE),
+(2, 'V-TSV-2', 1, 2, 'Устаревшая версия Apache Tomcat', 'Используется Apache Tomcat версии 8.5.29, уязвимая к CVE-2023-45133', 2, 2, 'In Progress', 'High', 7.5, 'CVE-2023-45133', '2024-01-10', '2024-01-22', FALSE),
+(3, 'V-MDD-1', 3, 3, 'Слабая политика паролей', 'Обнаружены слабые пароли у нескольких учетных записей', 3, 3, 'Fixed', 'Medium', 5.3, NULL, '2024-01-05', '2024-01-18', FALSE),
+(4, 'V-KZL-1', 4, 4, 'Открытые порты 445/139 (SMB)', 'SMB порты доступны из внешней сети', 4, 1, 'Open', 'High', 8.8, NULL, '2024-01-12', '2024-01-19', FALSE),
+(5, 'V-RZP-1', 5, 5, 'Missing Security Headers', 'Отсутствуют заголовки безопасности X-Frame-Options, CSP', 5, 2, 'Open', 'Low', 2.5, NULL, '2024-01-14', '2024-01-21', FALSE),
+(6, 'V-VGP-1', 6, 6, 'Уязвимость в библиотеке Log4j', 'Log4j версия 2.14.0 уязвима к CVE-2021-44228', 6, 1, 'Open', 'Critical', 10.0, 'CVE-2021-44228', '2024-01-08', '2024-01-20', FALSE),
+(7, 'V-FNH-1', 2, 7, 'SSRF в функционале загрузки', 'Обнаружена Server-Side Request Forgery уязвимость', 5, 3, 'Verified', 'High', 7.8, NULL, '2024-01-11', '2024-01-17', FALSE),
+(8, 'V-MDD-2', 3, 8, 'Несвоевременное обновление системных компонентов', 'Накоплено 15 критических обновлений', 7, 2, 'Open', 'Medium', 4.5, NULL, '2024-01-13', '2024-01-19', FALSE);
 
 -- ============ TICKETS ============
-INSERT INTO tickets (id, client_id, title, description, assignee_id, reporter_id, priority, status, due_date, resolution) VALUES
-(1, 1, 'SQL Injection на web-01.example.com', 'Необходимо устранить уязвимость SQL Injection на сервере web-01.example.com', 1, NULL, 'Critical', 'Open', '2024-01-22', NULL),
-(2, 1, 'Устаревшая версия Apache Tomcat', 'Обновление Apache Tomcat до актуальной версии для устранения CVE-2023-45133', 2, NULL, 'High', 'In Progress', '2024-01-25', NULL),
-(3, 6, 'Лог4дж уязвимость', 'Критическая уязвимость Log4j требует немедленного обновления', 6, NULL, 'Critical', 'Open', '2024-01-21', NULL),
-(4, 4, 'Открытые SMB порты', 'SMB порты доступны извне. Требуется закрыть доступ или настроить VPN', 4, NULL, 'High', 'Open', '2024-01-26', NULL),
-(5, 5, 'Security Headers отсутствуют', 'Добавить заголовки безопасности X-Frame-Options и Content-Security-Policy', 5, NULL, 'Low', 'Open', '2024-01-30', NULL),
-(6, 2, 'SSRF уязвимость', 'Обнаружена SSRF уязвимость при пентесте. Требуется устранение', 7, NULL, 'High', 'Verified', '2024-01-18', 'Уязвимость устранена. Добавлена валидация URL'),
-(7, 3, 'Множественные проблемы с паролями', 'Усиление политики паролей и смена слабых паролей', 3, NULL, 'Medium', 'Fixed', '2024-01-20', 'Внедрена новая политика паролей. Все слабые пароли изменены');
+-- Note: due_date must be >= created_at (current date), so we use future dates
+INSERT INTO tickets (id, display_id, client_id, title, description, assignee_id, reporter_id, priority, status, due_date, resolution, is_deleted) VALUES
+(1, 'T-TSV-1', 1, 'SQL Injection на web-01.example.com', 'Необходимо устранить уязвимость SQL Injection на сервере web-01.example.com', 1, NULL, 'Critical', 'Open', (CURRENT_DATE + INTERVAL '7 days'), NULL, FALSE),
+(2, 'T-TSV-2', 1, 'Устаревшая версия Apache Tomcat', 'Обновление Apache Tomcat до актуальной версии для устранения CVE-2023-45133', 2, NULL, 'High', 'In Progress', (CURRENT_DATE + INTERVAL '10 days'), NULL, FALSE),
+(3, 'T-VGP-1', 6, 'Лог4дж уязвимость', 'Критическая уязвимость Log4j требует немедленного обновления', 6, NULL, 'Critical', 'Open', (CURRENT_DATE + INTERVAL '5 days'), NULL, FALSE),
+(4, 'T-KZL-1', 4, 'Открытые SMB порты', 'SMB порты доступны извне. Требуется закрыть доступ или настроить VPN', 4, NULL, 'High', 'Open', (CURRENT_DATE + INTERVAL '14 days'), NULL, FALSE),
+(5, 'T-RZP-1', 5, 'Security Headers отсутствуют', 'Добавить заголовки безопасности X-Frame-Options и Content-Security-Policy', 5, NULL, 'Low', 'Open', (CURRENT_DATE + INTERVAL '30 days'), NULL, FALSE),
+(6, 'T-FNH-1', 2, 'SSRF уязвимость', 'Обнаружена SSRF уязвимость при пентесте. Требуется устранение', 7, NULL, 'High', 'Verified', NULL, 'Уязвимость устранена. Добавлена валидация URL', FALSE),
+(7, 'T-MDD-1', 3, 'Множественные проблемы с паролями', 'Усиление политики паролей и смена слабых паролей', 3, NULL, 'Medium', 'Fixed', NULL, 'Внедрена новая политика паролей. Все слабые пароли изменены', FALSE);
 
 -- ============ TICKET MESSAGES ============
 INSERT INTO ticket_messages (id, ticket_id, author_id, timestamp, message) VALUES
@@ -137,3 +138,43 @@ INSERT INTO gantt_tasks (id, project_id, name, start_date, end_date) VALUES
 (5, 3, 'Пентест веб-приложений', '2024-01-16', '2024-02-15'),
 (6, 3, 'Пентест баз данных', '2024-02-16', '2024-02-28'),
 (7, 3, 'Подготовка отчета', '2024-03-01', '2024-03-08');
+
+-- Fix sequences after inserting data with explicit IDs
+-- This ensures that new records get correct auto-incrementing IDs
+SELECT setval('workers_id_seq', COALESCE((SELECT MAX(id) FROM workers), 1), true);
+SELECT setval('asset_types_id_seq', COALESCE((SELECT MAX(id) FROM asset_types), 1), true);
+SELECT setval('scanners_id_seq', COALESCE((SELECT MAX(id) FROM scanners), 1), true);
+SELECT setval('clients_id_seq', COALESCE((SELECT MAX(id) FROM clients), 1), true);
+SELECT setval('client_additional_contacts_id_seq', COALESCE((SELECT MAX(id) FROM client_additional_contacts), 1), true);
+SELECT setval('projects_id_seq', COALESCE((SELECT MAX(id) FROM projects), 1), true);
+SELECT setval('project_team_members_id_seq', COALESCE((SELECT MAX(id) FROM project_team_members), 1), true);
+SELECT setval('assets_id_seq', COALESCE((SELECT MAX(id) FROM assets), 1), true);
+SELECT setval('vulnerabilities_id_seq', COALESCE((SELECT MAX(id) FROM vulnerabilities), 1), true);
+SELECT setval('tickets_id_seq', COALESCE((SELECT MAX(id) FROM tickets), 1), true);
+SELECT setval('ticket_messages_id_seq', COALESCE((SELECT MAX(id) FROM ticket_messages), 1), true);
+SELECT setval('gantt_tasks_id_seq', COALESCE((SELECT MAX(id) FROM gantt_tasks), 1), true);
+
+-- Update existing records with display_id if they don't have one
+-- This handles the case when display_id is not set in initial INSERT statements
+DO $$
+DECLARE
+    r RECORD;
+    client_short_name TEXT;
+    vuln_count INTEGER;
+    ticket_count INTEGER;
+BEGIN
+
+    -- Update vulnerabilities display_id
+    FOR r IN SELECT id, client_id FROM vulnerabilities WHERE display_id IS NULL ORDER BY id LOOP
+        SELECT short_name INTO client_short_name FROM clients WHERE id = r.client_id;
+        SELECT COUNT(*) INTO vuln_count FROM vulnerabilities WHERE client_id = r.client_id AND id <= r.id;
+        UPDATE vulnerabilities SET display_id = 'V-' || client_short_name || '-' || vuln_count WHERE id = r.id;
+    END LOOP;
+
+    -- Update tickets display_id
+    FOR r IN SELECT id, client_id FROM tickets WHERE display_id IS NULL ORDER BY id LOOP
+        SELECT short_name INTO client_short_name FROM clients WHERE id = r.client_id;
+        SELECT COUNT(*) INTO ticket_count FROM tickets WHERE client_id = r.client_id AND id <= r.id;
+        UPDATE tickets SET display_id = 'T-' || client_short_name || '-' || ticket_count WHERE id = r.id;
+    END LOOP;
+END $$;

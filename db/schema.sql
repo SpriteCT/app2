@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS assets (
   status            asset_status NOT NULL,
   criticality       priority_type NOT NULL,
   last_scan         TIMESTAMPTZ,
+  is_deleted        BOOLEAN NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -158,6 +159,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(type_id);
 
 CREATE TABLE IF NOT EXISTS vulnerabilities (
   id             SERIAL PRIMARY KEY,
+  display_id     TEXT UNIQUE,
   client_id      INTEGER NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   asset_id       INTEGER REFERENCES assets(id) ON DELETE SET NULL,
   title          TEXT NOT NULL,
@@ -170,6 +172,7 @@ CREATE TABLE IF NOT EXISTS vulnerabilities (
   cve            TEXT, 
   discovered     DATE,
   last_modified  DATE,
+  is_deleted     BOOLEAN NOT NULL DEFAULT FALSE,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
   -- no assignee by design
@@ -184,6 +187,7 @@ CREATE INDEX IF NOT EXISTS idx_vulns_scanner ON vulnerabilities(scanner_id);
 
 CREATE TABLE IF NOT EXISTS tickets (
   id           SERIAL PRIMARY KEY,
+  display_id   TEXT UNIQUE,
   client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   title        TEXT NOT NULL,
   description  TEXT,
@@ -191,6 +195,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   reporter_id  INTEGER REFERENCES workers(id) ON DELETE SET NULL,
   priority     priority_type NOT NULL,
   status       ticket_status NOT NULL DEFAULT 'Open',
+  is_deleted   BOOLEAN NOT NULL DEFAULT FALSE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   due_date     DATE,

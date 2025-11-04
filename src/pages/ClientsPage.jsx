@@ -1,13 +1,38 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Eye, Edit, Trash2, Building2, User, Phone, Mail, FileText, Calendar, Server, Users, Target } from 'lucide-react'
-import { mockClients } from '../data/mockClients'
-import { mockProjects, projectTypeColors, projectStatusColors, priorityColorsProjects } from '../data/mockProjects'
-import { mockWorkers } from '../data/mockWorkers'
+import { projectTypeColors, projectStatusColors, priorityColorsProjects } from '../data/mockProjects'
+import { clientsApi, projectsApi, workersApi, ganttApi } from '../services/api'
+import { transformClient, transformProject, transformWorker, transformClientToBackend, transformProjectToBackend } from '../utils/dataTransform'
+import CreateProjectModal from '../components/CreateProjectModal'
 
 const ClientsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
-  const [clients, setClients] = useState(mockClients)
-  const [projects, setProjects] = useState(mockProjects)
+  const [clients, setClients] = useState([])
+  const [projects, setProjects] = useState([])
+  const [workers, setWorkers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        const [clientsData, projectsData, workersData] = await Promise.all([
+          clientsApi.getAll(),
+          projectsApi.getAll(),
+          workersApi.getAll(),
+        ])
+        setClients(clientsData.map(transformClient))
+        setProjects(projectsData.map(transformProject))
+        setWorkers(workersData.map(transformWorker))
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
   const [selectedClient, setSelectedClient] = useState(null)
   const [showClientModal, setShowClientModal] = useState(false)
   const [showProjectModal, setShowProjectModal] = useState(false)
@@ -21,16 +46,6 @@ const ClientsPage = () => {
   const [editProject, setEditProject] = useState(null)
   const [showEditClientModal, setShowEditClientModal] = useState(false)
   const [editClient, setEditClient] = useState(null)
-  const [newProject, setNewProject] = useState({
-    name: '',
-    type: 'Vulnerability Scanning',
-    priority: 'High',
-    description: '',
-    startDate: '',
-    endDate: '',
-    budget: '',
-    team: [],
-  })
   const [newClient, setNewClient] = useState({
     id: String(Date.now()),
     name: '',
@@ -63,6 +78,27 @@ const ClientsPage = () => {
 
   const getProjectsForClient = (clientId) => {
     return projects.filter(p => p.clientId === clientId)
+  }
+
+  // Функция для расчета прогресса проекта на основе текущей даты
+  const calculateProjectProgress = (startDate, endDate) => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const now = new Date()
+    const total = end - start
+    if (total <= 0) return 0
+    if (now < start) return 0
+    if (now > end) return 100
+    const progress = Math.round(((now - start) / total) * 100)
+    return Math.min(100, Math.max(0, progress))
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-white">Загрузка...</div>
+      </div>
+    )
   }
 
   return (
@@ -195,12 +231,12 @@ const ClientsPage = () => {
                 >
                   <Edit className="w-4 h-4" /> Редактировать
                 </button>
-                <button
-                  onClick={() => setSelectedClient(null)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
+              <button
+                onClick={() => setSelectedClient(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
               </div>
             </div>
             
@@ -305,10 +341,10 @@ const ClientsPage = () => {
                   Инфраструктура
                 </h3>
                 <div className="bg-dark-card rounded p-4">
-                  <div className="text-sm text-gray-400 mb-1">Тип развертывания</div>
-                  <div className="text-xs text-white mt-2">
-                    {selectedClient.infrastructure.cloudServices && '☁️ Cloud '}
-                    {selectedClient.infrastructure.onPremise && '🏢 On-Premise'}
+                    <div className="text-sm text-gray-400 mb-1">Тип развертывания</div>
+                    <div className="text-xs text-white mt-2">
+                      {selectedClient.infrastructure.cloudServices && '☁️ Cloud '}
+                      {selectedClient.infrastructure.onPremise && '🏢 On-Premise'}
                   </div>
                 </div>
               </div>
@@ -365,13 +401,13 @@ const ClientsPage = () => {
                           {project.startDate} - {project.endDate}
                         </span>
                         <span className="text-xs text-gray-400">
-                          Прогресс: {project.progress}%
+                          Прогресс: {calculateProjectProgress(project.startDate, project.endDate)}%
                         </span>
                       </div>
                       <div className="mt-3 bg-dark-surface rounded h-2 overflow-hidden">
                         <div
                           className="bg-dark-purple-primary h-full transition-all"
-                          style={{ width: `${project.progress}%` }}
+                          style={{ width: `${calculateProjectProgress(project.startDate, project.endDate)}%` }}
                         />
                       </div>
                     </div>
@@ -452,10 +488,18 @@ const ClientsPage = () => {
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowEditClientModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
                 <button
-                  onClick={() => {
-                    setClients(prev => prev.map(c => c.id === editClient.id ? { ...c, ...editClient } : c))
-                    setSelectedClient(prev => (prev && prev.id === editClient.id ? { ...prev, ...editClient } : prev))
-                    setShowEditClientModal(false)
+                  onClick={async () => {
+                    try {
+                      const backendData = transformClientToBackend(editClient)
+                      const updated = await clientsApi.update(editClient.id, backendData)
+                      const transformed = transformClient(updated)
+                      setClients(prev => prev.map(c => c.id === transformed.id ? transformed : c))
+                      setSelectedClient(prev => (prev && prev.id === transformed.id ? transformed : prev))
+                      setShowEditClientModal(false)
+                    } catch (error) {
+                      console.error('Failed to update client:', error)
+                      alert('Ошибка при обновлении клиента')
+                    }
                   }}
                   className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
                 >Сохранить</button>
@@ -483,7 +527,7 @@ const ClientsPage = () => {
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Полное название</label>
                   <input type="text" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
-                </div>
+            </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Краткое имя (3–4 заглавные)</label>
                   <input type="text" value={newClient.shortName} onChange={(e) => setNewClient({ ...newClient, shortName: e.target.value.toUpperCase().slice(0,4) })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
@@ -572,15 +616,21 @@ const ClientsPage = () => {
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowClientModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
                 <button
-                  onClick={() => {
-                    const id = String(Date.now())
-                    const item = { ...newClient, id }
-                    setClients(prev => [item, ...prev])
-                    setShowClientModal(false)
-                    setNewClient({
-                      id: String(Date.now()),
-                      name: '', shortName: '', industry: '', contactPerson: '', position: '', phone: '', email: '', sla: 'Standard', securityLevel: 'High', contractNumber: '', contractDate: '', contractExpiry: '', billingCycle: 'Monthly', infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true }, notes: '',
-                    })
+                  onClick={async () => {
+                    try {
+                      const backendData = transformClientToBackend(newClient)
+                      const created = await clientsApi.create(backendData)
+                      const transformed = transformClient(created)
+                      setClients(prev => [transformed, ...prev])
+                      setShowClientModal(false)
+                      setNewClient({
+                        id: String(Date.now()),
+                        name: '', shortName: '', industry: '', contactPerson: '', position: '', phone: '', email: '', sla: 'Standard', securityLevel: 'High', contractNumber: '', contractDate: '', contractExpiry: '', billingCycle: 'Monthly', infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true }, notes: '',
+                      })
+                    } catch (error) {
+                      console.error('Failed to create client:', error)
+                      alert('Ошибка при создании клиента')
+                    }
                   }}
                   className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
                 >Добавить клиента</button>
@@ -591,189 +641,15 @@ const ClientsPage = () => {
       )}
 
       {/* Add Project Modal */}
-      {showProjectModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Создать новый проект</h2>
-              <button
-                onClick={() => {
-                  setShowProjectModal(false)
-                  setNewProject({
-                    name: '',
-                    type: 'Vulnerability Scanning',
-                    priority: 'High',
-                    description: '',
-                    startDate: '',
-                    endDate: '',
-                    budget: '',
-                    team: [],
-                  })
-                }}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Название проекта</label>
-                <input
-                  type="text"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({...newProject, name: e.target.value})}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Введите название проекта"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Тип проекта</label>
-                  <select
-                    value={newProject.type}
-                    onChange={(e) => setNewProject({...newProject, type: e.target.value})}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option>Vulnerability Scanning</option>
-                    <option>Penetration Test</option>
-                    <option>Network Scanning</option>
-                    <option>BAS</option>
-                    <option>Web Application Scanning</option>
-                    <option>Compliance Check</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
-                  <select
-                    value={newProject.priority}
-                    onChange={(e) => setNewProject({...newProject, priority: e.target.value})}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Дата начала</label>
-                  <input
-                    type="date"
-                    value={newProject.startDate}
-                    onChange={(e) => setNewProject({...newProject, startDate: e.target.value})}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Дата окончания</label>
-                  <input
-                    type="date"
-                    value={newProject.endDate}
-                    onChange={(e) => setNewProject({...newProject, endDate: e.target.value})}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Бюджет проекта</label>
-                <input
-                  type="number"
-                  value={newProject.budget}
-                  onChange={(e) => setNewProject({...newProject, budget: e.target.value})}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="1000000"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
-                <textarea
-                  rows="4"
-                  value={newProject.description}
-                  onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Опишите цели и задачи проекта..."
-                />
-              </div>
-
-              <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-4">
-                <p className="text-blue-400 text-sm">
-                  ℹ️ После создания проекта можно будет назначить команду и связать с уязвимостями и активами
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowProjectModal(false)
-                    setNewProject({
-                      name: '',
-                      type: 'Vulnerability Scanning',
-                      priority: 'High',
-                      description: '',
-                      startDate: '',
-                      endDate: '',
-                      budget: '',
-                      team: [],
-                    })
-                  }}
-                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={() => {
-                    if (!projectsForClient) {
-                      setShowProjectModal(false)
-                      return
-                    }
-                    const id = `P-${projectsForClient.shortName || projectsForClient.name}-${String(Date.now()).slice(-4)}`
-                    const newItem = {
-                      id,
-                      name: newProject.name || 'Новый проект',
-                      type: newProject.type,
-                      clientId: projectsForClient.id,
-                      clientName: projectsForClient.name,
-                      status: 'Active',
-                      startDate: newProject.startDate,
-                      endDate: newProject.endDate,
-                      priority: newProject.priority,
-                      description: newProject.description,
-                      team: newProject.team,
-                      budget: Number(newProject.budget || 0),
-                      progress: 0,
-                      vulnerabilities: [],
-                      tickets: [],
-                      assets: 0,
-                    }
-                    setProjects(prev => [newItem, ...prev])
-                    setShowProjectModal(false)
-                    setNewProject({
-                      name: '',
-                      type: 'Vulnerability Scanning',
-                      priority: 'High',
-                      description: '',
-                      startDate: '',
-                      endDate: '',
-                      budget: '',
-                      team: [],
-                    })
-                  }}
-                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
-                >
-                  Создать проект
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateProjectModal
+        isOpen={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        onCreate={(project) => {
+          setProjects(prev => [project, ...prev])
+          setShowProjectModal(false)
+        }}
+        clientId={projectsForClient?.id}
+      />
 
       {/* Projects List Modal for a specific client */}
       {showProjectsListModal && projectsForClient && (
@@ -792,6 +668,18 @@ const ClientsPage = () => {
               </button>
             </div>
             <div className="p-6 space-y-3">
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    setProjectsForClient(projectsForClient)
+                    setShowProjectModal(true)
+                  }}
+                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Добавить проект
+                </button>
+              </div>
               {getProjectsForClient(projectsForClient.id).map((project) => (
                 <div
                   key={project.id}
@@ -817,10 +705,12 @@ const ClientsPage = () => {
                     <span className="text-xs text-gray-400">
                       {project.startDate} - {project.endDate}
                     </span>
-                    <span className="text-xs text-gray-400">Прогресс: {project.progress}%</span>
+                    <span className="text-xs text-gray-400">
+                      Прогресс: {calculateProjectProgress(project.startDate, project.endDate)}%
+                    </span>
                   </div>
                   <div className="mt-3 bg-dark-surface rounded h-2 overflow-hidden">
-                    <div className="bg-dark-purple-primary h-full transition-all" style={{ width: `${project.progress}%` }} />
+                    <div className="bg-dark-purple-primary h-full transition-all" style={{ width: `${calculateProjectProgress(project.startDate, project.endDate)}%` }} />
                   </div>
                 </div>
               ))}
@@ -838,7 +728,6 @@ const ClientsPage = () => {
                 <Target className="w-6 h-6 text-purple-400" />
                 <div>
                   <h2 className="text-xl font-bold text-white">{selectedProject.name}</h2>
-                  <p className="text-sm text-gray-400">{selectedProject.id}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -852,24 +741,51 @@ const ClientsPage = () => {
                   <Edit className="w-4 h-4" /> Редактировать
                 </button>
                 <button
-                  onClick={() => {
-                    // Инициализируем задачи по артефактам, если пусто
-                    const start = selectedProject.startDate
-                    const end = selectedProject.endDate
-                    let initial = []
-                    const savedTasks = savedGanttByProject[selectedProject.id]
-                    if (savedTasks && Array.isArray(savedTasks)) {
-                      initial = savedTasks
-                    } else {
-                      initial = [{
-                        id: `${selectedProject.id}-task-1`,
-                        name: 'Основная работа',
-                        startDate: start,
-                        endDate: end,
-                      }]
+                  onClick={async () => {
+                    try {
+                      // Загружаем задачи Ганта с бэкенда
+                      const savedTasks = await ganttApi.getByProject(selectedProject.id)
+                      const start = selectedProject.startDate
+                      const end = selectedProject.endDate
+                      let initial = []
+                      if (savedTasks && Array.isArray(savedTasks) && savedTasks.length > 0) {
+                        // Преобразуем задачи из бэкенда в формат фронтенда
+                        initial = savedTasks.map(task => ({
+                          id: task.id,
+                          name: task.name,
+                          startDate: task.start_date,
+                          endDate: task.end_date,
+                        }))
+                      } else {
+                        initial = [{
+                          id: `temp-${Date.now()}`,
+                          name: 'Основная работа',
+                          startDate: start,
+                          endDate: end,
+                        }]
+                      }
+                      setGanttDraftTasks(initial)
+                      setShowGanttModal(true)
+                    } catch (error) {
+                      console.error('Failed to load Gantt tasks:', error)
+                      // Если ошибка, используем локальное сохранение как fallback
+                      const savedTasks = savedGanttByProject[selectedProject.id]
+                      const start = selectedProject.startDate
+                      const end = selectedProject.endDate
+                      let initial = []
+                      if (savedTasks && Array.isArray(savedTasks)) {
+                        initial = savedTasks
+                      } else {
+                        initial = [{
+                          id: `temp-${Date.now()}`,
+                          name: 'Основная работа',
+                          startDate: start,
+                          endDate: end,
+                        }]
+                      }
+                      setGanttDraftTasks(initial)
+                      setShowGanttModal(true)
                     }
-                    setGanttDraftTasks(initial)
-                    setShowGanttModal(true)
                   }}
                   className="px-3 py-1.5 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors text-sm"
                 >
@@ -941,7 +857,7 @@ const ClientsPage = () => {
               </div>
 
               <div className="bg-dark-surface rounded h-2 overflow-hidden">
-                <div className="bg-dark-purple-primary h-full transition-all" style={{ width: `${selectedProject.progress}%` }} />
+                <div className="bg-dark-purple-primary h-full transition-all" style={{ width: `${calculateProjectProgress(selectedProject.startDate, selectedProject.endDate)}%` }} />
               </div>
             </div>
           </div>
@@ -1011,14 +927,22 @@ const ClientsPage = () => {
                 <label className="text-sm text-gray-400 mb-2 block">Описание</label>
                 <textarea rows="4" value={editProject.description} onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
               </div>
-              <ProjectTeamEditor team={editProject.team || []} onChange={(updated) => setEditProject({ ...editProject, team: updated })} />
+              <ProjectTeamEditor team={editProject.team || []} teamMemberIds={editProject.teamMemberIds || []} workers={workers} onChange={(updatedTeam, updatedIds) => setEditProject({ ...editProject, team: updatedTeam, teamMemberIds: updatedIds })} />
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowEditProjectModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
                 <button
-                  onClick={() => {
-                    setProjects(prev => prev.map(p => p.id === editProject.id ? { ...p, ...editProject } : p))
-                    setSelectedProject(prev => (prev && prev.id === editProject.id ? { ...prev, ...editProject } : prev))
-                    setShowEditProjectModal(false)
+                  onClick={async () => {
+                    try {
+                      const backendData = transformProjectToBackend(editProject)
+                      const updated = await projectsApi.update(editProject.id, backendData)
+                      const transformed = transformProject(updated)
+                      setProjects(prev => prev.map(p => p.id === transformed.id ? transformed : p))
+                      setSelectedProject(prev => (prev && prev.id === transformed.id ? transformed : prev))
+                      setShowEditProjectModal(false)
+                    } catch (error) {
+                      console.error('Failed to update project:', error)
+                      alert('Ошибка при обновлении проекта')
+                    }
                   }}
                   className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
                 >Сохранить</button>
@@ -1068,9 +992,58 @@ const ClientsPage = () => {
                   Отмена
                 </button>
                 <button
-                  onClick={() => {
-                    setSavedGanttByProject(prev => ({ ...prev, [selectedProject.id]: ganttDraftTasks }))
-                    setShowGanttModal(false)
+                  onClick={async () => {
+                    try {
+                      // Получаем текущие задачи для проекта
+                      const existingTasks = await ganttApi.getByProject(selectedProject.id)
+                      const existingTaskIds = existingTasks ? existingTasks.map(t => t.id) : []
+                      
+                      // Удаляем задачи, которых больше нет
+                      for (const existingId of existingTaskIds) {
+                        const taskExists = ganttDraftTasks.some(t => String(t.id) === String(existingId))
+                        if (!taskExists) {
+                          await ganttApi.delete(existingId)
+                        }
+                      }
+                      
+                      // Создаем или обновляем задачи
+                      for (const task of ganttDraftTasks) {
+                        const taskData = {
+                          project_id: selectedProject.id,
+                          name: task.name,
+                          start_date: task.startDate,
+                          end_date: task.endDate,
+                        }
+                        
+                        // Проверяем, что ID не является временным (temp-*) и является числом
+                        if (task.id && !task.id.toString().startsWith('temp-') && !isNaN(parseInt(task.id))) {
+                          // Обновляем существующую задачу
+                          await ganttApi.update(parseInt(task.id), taskData)
+                        } else {
+                          // Создаем новую задачу
+                          await ganttApi.create(taskData)
+                        }
+                      }
+                      
+                      // Перезагружаем задачи с сервера для обновления ID
+                      const updatedTasks = await ganttApi.getByProject(selectedProject.id)
+                      if (updatedTasks && Array.isArray(updatedTasks) && updatedTasks.length > 0) {
+                        const transformedTasks = updatedTasks.map(task => ({
+                          id: task.id,
+                          name: task.name,
+                          startDate: task.start_date,
+                          endDate: task.end_date,
+                        }))
+                        setSavedGanttByProject(prev => ({ ...prev, [selectedProject.id]: transformedTasks }))
+                      } else {
+                        setSavedGanttByProject(prev => ({ ...prev, [selectedProject.id]: [] }))
+                      }
+                      
+                      setShowGanttModal(false)
+                    } catch (error) {
+                      console.error('Failed to save Gantt tasks:', error)
+                      alert('Ошибка при сохранении диаграммы Ганта: ' + (error.message || 'Неизвестная ошибка'))
+                    }
                   }}
                   className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
                 >
@@ -1094,15 +1067,49 @@ const GanttTaskEditor = ({ tasks, onChange, defaultStart, defaultEnd }) => {
   const [start, setStart] = useState(defaultStart)
   const [end, setEnd] = useState(defaultEnd)
 
+  const handleStartChange = (value) => {
+    // Ограничиваем дату начала пределами проекта
+    if (value < defaultStart) {
+      value = defaultStart
+    }
+    if (value > defaultEnd) {
+      value = defaultEnd
+    }
+    setStart(value)
+    // Если дата окончания стала меньше даты начала, обновляем её
+    if (end && value > end) {
+      setEnd(value)
+    }
+  }
+
+  const handleEndChange = (value) => {
+    // Ограничиваем дату окончания пределами проекта
+    if (value < defaultStart) {
+      value = defaultStart
+    }
+    if (value > defaultEnd) {
+      value = defaultEnd
+    }
+    setEnd(value)
+    // Если дата начала стала больше даты окончания, обновляем её
+    if (start && value < start) {
+      setStart(value)
+    }
+  }
+
   const addTask = () => {
-    if (!name || !start || !end) return
+    if (!name || !start || !end) {
+      alert('Пожалуйста, заполните все поля')
+      return
+    }
     // Ограничение по датам проекта
     if (start < defaultStart || end > defaultEnd || start > end) {
+      alert('Даты задачи должны находиться в пределах сроков проекта')
       return
     }
     const id = `task-${Date.now()}`
-    onChange([...
-      tasks,
+    onChange([
+      ...tasks,
       { id, name, startDate: start, endDate: end }
     ])
     setName('')
@@ -1118,8 +1125,22 @@ const GanttTaskEditor = ({ tasks, onChange, defaultStart, defaultEnd }) => {
     <div className="bg-dark-card border border-dark-border rounded-lg p-4">
       <div className="grid grid-cols-4 gap-3 mb-3">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название задачи" className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
-        <input type="date" value={start} min={defaultStart} max={defaultEnd} onChange={(e) => setStart(e.target.value)} className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
-        <input type="date" value={end} min={defaultStart} max={defaultEnd} onChange={(e) => setEnd(e.target.value)} className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" />
+        <input 
+          type="date" 
+          value={start} 
+          min={defaultStart} 
+          max={defaultEnd} 
+          onChange={(e) => handleStartChange(e.target.value)} 
+          className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" 
+        />
+        <input 
+          type="date" 
+          value={end} 
+          min={start || defaultStart} 
+          max={defaultEnd} 
+          onChange={(e) => handleEndChange(e.target.value)} 
+          className="px-3 py-2 bg-dark-surface border border-dark-border text-white rounded" 
+        />
         <button onClick={addTask} className="px-3 py-2 bg-dark-purple-primary text-white rounded hover:bg-dark-purple-secondary">Добавить</button>
       </div>
       {tasks.length > 0 && (
@@ -1148,8 +1169,13 @@ const GanttChart = ({ tasks, startDate, endDate }) => {
 
   const formatTick = (i) => {
     const d = new Date(start.getTime() + (totalMs * i) / ticks)
-    return d.toISOString().slice(0, 10)
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
   }
+  
+  // Текущая дата для отображения на шкале
+  const now = new Date()
+  const nowInRange = now >= start && now <= end
+  const nowPosition = nowInRange ? ((now - start) / totalMs) * 100 : null
 
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
 
@@ -1165,6 +1191,16 @@ const GanttChart = ({ tasks, startDate, endDate }) => {
             ))}
           </div>
           <div className="absolute left-0 right-0 top-4 h-px bg-dark-border" />
+          {/* Текущая дата */}
+          {nowPosition !== null && (
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+              style={{ left: `${nowPosition}%` }}
+              title={`Сегодня: ${now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}`}
+            >
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1184,6 +1220,13 @@ const GanttChart = ({ tasks, startDate, endDate }) => {
                   style={{ left: `${left}%`, width: `${width}%` }}
                   title={`${task.startDate} — ${task.endDate}`}
                 />
+                {/* Текущая дата на задаче */}
+                {nowPosition !== null && (
+                  <div 
+                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                    style={{ left: `${nowPosition}%` }}
+                  />
+                )}
               </div>
             </div>
           )
@@ -1231,33 +1274,39 @@ const ClientContactsEditor = ({ contacts, onChange }) => {
 }
 
 // Редактор команды проекта с выпадающим списком и добавлением произвольных участников
-const ProjectTeamEditor = ({ team, onChange }) => {
+const ProjectTeamEditor = ({ team, teamMemberIds = [], workers = [], onChange }) => {
   const [selectedWorkerId, setSelectedWorkerId] = useState('')
   const add = () => {
     if (!selectedWorkerId) return
-    const worker = mockWorkers.find(w => w.id === selectedWorkerId)
+    const worker = workers.find(w => String(w.id) === String(selectedWorkerId))
     if (!worker) return
-    if (team.includes(worker.fullName)) return
-    onChange([...team, worker.fullName])
+    if (teamMemberIds.includes(parseInt(selectedWorkerId))) return
+    const newTeam = [...team, worker.fullName]
+    const newIds = [...teamMemberIds, parseInt(selectedWorkerId)]
+    onChange(newTeam, newIds)
     setSelectedWorkerId('')
   }
-  const remove = (name) => onChange(team.filter(t => t !== name))
+  const remove = (index) => {
+    const newTeam = team.filter((_, i) => i !== index)
+    const newIds = teamMemberIds.filter((_, i) => i !== index)
+    onChange(newTeam, newIds)
+  }
 
   return (
     <div>
       <label className="text-sm text-gray-400 mb-2 block">Команда</label>
       <div className="flex flex-wrap gap-2 mb-2">
-        {team.map(member => (
-          <span key={member} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded flex items-center gap-2">
+        {team.map((member, idx) => (
+          <span key={idx} className="px-3 py-1 bg-dark-card border border-dark-border text-xs text-white rounded flex items-center gap-2">
             {member}
-            <button onClick={() => remove(member)} className="text-gray-400 hover:text-white">✕</button>
+            <button onClick={() => remove(idx)} className="text-gray-400 hover:text-white">✕</button>
           </span>
         ))}
       </div>
       <div className="flex gap-2 items-center">
         <select value={selectedWorkerId} onChange={(e) => setSelectedWorkerId(e.target.value)} className="flex-1 px-3 py-2 bg-dark-card border border-dark-border text-white rounded">
           <option value="">— выбрать участника —</option>
-          {mockWorkers.map(w => (
+          {workers.map(w => (
             <option key={w.id} value={w.id}>{w.fullName}</option>
           ))}
         </select>

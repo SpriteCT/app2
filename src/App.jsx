@@ -1,18 +1,34 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Shield, Ticket, Building2, ChevronDown, Server, Users, BarChart } from 'lucide-react'
 import VulnerabilitiesPage from './pages/VulnerabilitiesPage'
 import TicketsPage from './pages/TicketsPage'
 import AssetsPage from './pages/AssetsPage'
 import ClientsPage from './pages/ClientsPage'
 import ReportsPage from './pages/ReportsPage'
-import { mockClients } from './data/mockClients'
+import { clientsApi } from './services/api'
+import { transformClient } from './utils/dataTransform'
 
 function App() {
   const [activePage, setActivePage] = useState('vulnerabilities')
-  const [selectedClient, setSelectedClient] = useState(mockClients.find(c => c.isDefault)?.id || 'client-all')
+  const [selectedClient, setSelectedClient] = useState('client-all')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
+  const [clients, setClients] = useState([])
 
-  const currentClient = mockClients.find(c => c.id === selectedClient) || mockClients[0]
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const clientsData = await clientsApi.getAll()
+        setClients(clientsData.map(transformClient))
+      } catch (error) {
+        console.error('Failed to load clients:', error)
+      }
+    }
+    loadClients()
+  }, [])
+
+  const currentClient = selectedClient === 'client-all' 
+    ? { name: 'Все клиенты', shortName: 'Все', id: 'client-all' }
+    : clients.find(c => c.id === selectedClient) || { name: 'Все клиенты', shortName: 'Все', id: 'client-all' }
 
   return (
     <div className="min-h-screen bg-dark-bg">
@@ -89,7 +105,7 @@ function App() {
                   className="flex items-center gap-2 px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
                 >
                   <Building2 className="w-4 h-4" />
-                  <span>{currentClient.shortName}</span>
+                  <span>{currentClient.shortName || currentClient.name || 'Все'}</span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
                 
@@ -100,7 +116,27 @@ function App() {
                       onClick={() => setShowClientDropdown(false)}
                     />
                     <div className="absolute right-0 mt-2 w-64 bg-dark-surface border border-dark-border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
-                      {mockClients.map((client) => (
+                      <button
+                        key="client-all"
+                        onClick={() => {
+                          setSelectedClient('client-all')
+                          setShowClientDropdown(false)
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-dark-card transition-colors ${
+                          selectedClient === 'client-all' ? 'bg-dark-card' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-white font-medium">Все</div>
+                            <div className="text-xs text-gray-400">Все клиенты</div>
+                          </div>
+                          {selectedClient === 'client-all' && (
+                            <span className="text-dark-purple-primary">✓</span>
+                          )}
+                        </div>
+                      </button>
+                      {clients.map((client) => (
                         <button
                           key={client.id}
                           onClick={() => {

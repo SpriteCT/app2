@@ -241,6 +241,7 @@ class AssetUpdate(BaseModel):
 class Asset(AssetBase, TimestampMixin):
     id: int
     client_id: int
+    is_deleted: bool = False
     client: Optional[Client] = None
     type: Optional[AssetType] = None
     
@@ -252,7 +253,6 @@ class VulnerabilityBase(BaseModel):
     title: str
     description: Optional[str] = None
     asset_id: Optional[int] = None
-    asset_type_id: Optional[int] = None
     scanner_id: Optional[int] = None
     status: str
     criticality: str
@@ -270,7 +270,6 @@ class VulnerabilityUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     asset_id: Optional[int] = None
-    asset_type_id: Optional[int] = None
     scanner_id: Optional[int] = None
     status: Optional[str] = None
     criticality: Optional[str] = None
@@ -282,7 +281,9 @@ class VulnerabilityUpdate(BaseModel):
 
 class Vulnerability(VulnerabilityBase, TimestampMixin):
     id: int
+    display_id: Optional[str] = None
     client_id: int
+    is_deleted: bool = False
     client: Optional[Client] = None
     asset: Optional[Asset] = None
     asset_type: Optional[AssetType] = None
@@ -341,13 +342,16 @@ class TicketUpdate(BaseModel):
 
 class Ticket(TicketBase, TimestampMixin):
     id: int
+    display_id: Optional[str] = None
     client_id: int
-    created_at: datetime
-    client: Optional[Client] = None
+    is_deleted: bool = False
+    assignee_id: Optional[int] = None
+    reporter_id: Optional[int] = None
+    vulnerabilities: List[Vulnerability] = []
     assignee: Optional[Worker] = None
     reporter: Optional[Worker] = None
+    client: Optional[Client] = None
     messages: List[TicketMessage] = []
-    vulnerabilities: List[Vulnerability] = []
     
     model_config = ConfigDict(from_attributes=True)
 

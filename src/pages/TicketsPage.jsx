@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Ticket, MessageCircle, Clock, User, Shield, Server, Info } from 'lucide-react'
-import { mockTickets, priorityColors, statusColorsTickets } from '../data/mockTickets'
-import { mockWorkers } from '../data/mockWorkers'
-import { mockVulnerabilities } from '../data/mockVulnerabilities'
-import { mockClients } from '../data/mockClients'
-import { mockAssets } from '../data/mockAssets'
+import { priorityColors, statusColorsTickets } from '../data/mockTickets'
+import { ticketsApi, workersApi, vulnerabilitiesApi, clientsApi, assetsApi, referenceApi } from '../services/api'
+import { transformTicket, transformWorker, transformVulnerability, transformTicketToBackend, transformAsset } from '../utils/dataTransform'
+import TicketDetailModal from '../components/TicketDetailModal'
+import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
+import CreateTicketModal from '../components/CreateTicketModal'
 
 const TicketsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -17,75 +18,156 @@ const TicketsPage = ({ selectedClient }) => {
   const [vulnFilterCriticality, setVulnFilterCriticality] = useState('All')
   const [vulnFilterStatus, setVulnFilterStatus] = useState('All')
   const [selectedVulns, setSelectedVulns] = useState([])
-  const [tickets, setTickets] = useState(mockTickets)
+  const [tickets, setTickets] = useState([])
+  const [vulnerabilities, setVulnerabilities] = useState([])
+  const [workers, setWorkers] = useState([])
+  const [clients, setClients] = useState([])
+  const [assets, setAssets] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showEditTicketModal, setShowEditTicketModal] = useState(false)
   const [editTicket, setEditTicket] = useState(null)
   const [autoTitle, setAutoTitle] = useState('')
   const [createPriority, setCreatePriority] = useState('High')
   const [createDescription, setCreateDescription] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [ticketToDelete, setTicketToDelete] = useState(null)
+
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        const [ticketsData, vulnsData, workersData, clientsData, assetsData, assetTypesData, scannersData] = await Promise.all([
+          ticketsApi.getAll(),
+          vulnerabilitiesApi.getAll(),
+          workersApi.getAll(),
+          clientsApi.getAll(),
+          assetsApi.getAll(),
+          referenceApi.getAssetTypes(),
+          referenceApi.getScanners(),
+        ])
+        console.log('Loaded tickets from API:', ticketsData)
+        console.log('Number of tickets:', ticketsData?.length || 0)
+        const transformedTickets = ticketsData.map(transformTicket).filter(t => t !== null)
+        console.log('Transformed tickets:', transformedTickets)
+        console.log('Number of transformed tickets:', transformedTickets.length)
+        setTickets(transformedTickets)
+        setVulnerabilities(vulnsData.map(transformVulnerability))
+        setWorkers(workersData.map(transformWorker))
+        setClients(clientsData.map(c => ({ id: c.id, name: c.name, shortName: c.short_name })))
+        setAssets(assetsData.map(transformAsset))
+        setAssetsForModal(assetsData.map(transformAsset))
+        setAssetTypesForModal(assetTypesData.map(at => ({ id: at.id, name: at.name })))
+        setScannersForModal(scannersData)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter(t => {
-      const clientName = mockClients.find(c => c.id === t.clientId)?.name || ''
-      const matchesSearch = t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const filtered = tickets.filter(t => {
+      if (!t) return false
+      const clientName = clients.find(c => String(c.id) === String(t.clientId))?.name || ''
+      const matchesSearch = String(t.displayId || t.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
                           t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           clientName.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesPriority = selectedPriority === 'All' || t.priority === selectedPriority
       const matchesStatus = selectedStatus === 'All' || t.status === selectedStatus
-      const matchesClient = selectedClient === 'client-all' || t.clientId === selectedClient
+      const matchesClient = selectedClient === 'client-all' || String(t.clientId) === String(selectedClient)
 
       return matchesSearch && matchesPriority && matchesStatus && matchesClient
     })
-  }, [searchTerm, selectedPriority, selectedStatus, selectedClient, tickets])
+    console.log('Filtered tickets:', filtered.length, 'from', tickets.length)
+    return filtered
+  }, [searchTerm, selectedPriority, selectedStatus, selectedClient, tickets, clients])
 
   const priorityCounts = useMemo(() => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
     const filtered = selectedClient === 'client-all' 
       ? tickets 
-      : tickets.filter(t => t.clientId === selectedClient)
+      : tickets.filter(t => String(t.clientId) === String(selectedClient))
     filtered.forEach(t => {
       if (counts.hasOwnProperty(t.priority)) {
         counts[t.priority]++
       }
     })
     return counts
-  }, [selectedClient])
+  }, [selectedClient, tickets])
 
   const statusCounts = useMemo(() => {
-    const counts = { Open: 0, 'In Progress': 0, Fixed: 0, Verified: 0 }
+    const counts = { Open: 0, 'In Progress': 0, Fixed: 0 }
     const filtered = selectedClient === 'client-all' 
       ? tickets 
-      : tickets.filter(t => t.clientId === selectedClient)
+      : tickets.filter(t => String(t.clientId) === String(selectedClient))
     filtered.forEach(t => {
       if (counts.hasOwnProperty(t.status)) {
         counts[t.status]++
       }
     })
     return counts
-  }, [selectedClient])
+  }, [selectedClient, tickets])
 
   const getVulnerabilitiesForTicket = (ticket) => {
-    return mockVulnerabilities.filter(v => ticket.vulnerabilities.includes(v.id))
+    if (!ticket || !ticket.vulnerabilities) return []
+    return ticket.vulnerabilities.map(v => transformVulnerability(v))
   }
-  const [viewVuln, setViewVuln] = useState(null)
 
-  const handleSendMessage = (ticketId) => {
+  // Load full ticket data when editing
+  useEffect(() => {
+    if (showEditTicketModal && editTicket) {
+      const loadFullTicket = async () => {
+        try {
+          const fullTicket = await ticketsApi.getById(editTicket.id)
+          const transformed = transformTicket(fullTicket)
+          setEditTicket(transformed)
+        } catch (error) {
+          console.error('Failed to load ticket:', error)
+        }
+      }
+      loadFullTicket()
+    }
+  }, [showEditTicketModal, editTicket?.id])
+  const [viewVuln, setViewVuln] = useState(null)
+  const [assetsForModal, setAssetsForModal] = useState([])
+  const [assetTypesForModal, setAssetTypesForModal] = useState([])
+  const [scannersForModal, setScannersForModal] = useState([])
+
+  const handleSendMessage = async (ticketId) => {
     if (!newMessage.trim()) return
     
-    const message = {
-      id: `msg-${Date.now()}`,
-      author: 'Вы',
-      timestamp: new Date().toLocaleString('ru-RU'),
-      message: newMessage,
-    }
-    
-    // В реальном приложении здесь был бы API вызов
+    try {
+      // Отправляем сообщение через API
+      const messageData = {
+        message: newMessage.trim(),
+        author_id: null // Можно добавить автора позже
+      }
+      await ticketsApi.addMessage(ticketId, messageData)
+      
+      // Обновляем тикет, чтобы получить обновленный список сообщений
+      const updatedTicket = await ticketsApi.getById(ticketId)
+      const transformed = transformTicket(updatedTicket)
+      
+      // Обновляем выбранный тикет и список тикетов
+      setSelectedTicket(transformed)
+      setTickets(prev => prev.map(t => t.id === ticketId ? transformed : t))
+      
     setNewMessage('')
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      alert('Ошибка при отправке сообщения: ' + (error.message || 'Неизвестная ошибка'))
+    }
   }
 
   const getDaysUntilDue = (dueDate) => {
+    if (!dueDate) return null
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const due = new Date(dueDate)
+    due.setHours(0, 0, 0, 0)
     const diffTime = due - today
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return diffDays
@@ -95,34 +177,34 @@ const TicketsPage = ({ selectedClient }) => {
   // - если в фильтре выбран конкретный клиент, используем его
   // - иначе берём клиента из первой выбранной уязвимости
   const allowedClientForTicket = useMemo(() => {
-    if (selectedClient && selectedClient !== 'client-all') return selectedClient
+    if (selectedClient && selectedClient !== 'client-all') return String(selectedClient)
     if (selectedVulns.length > 0) {
-      const first = mockVulnerabilities.find(v => v.id === selectedVulns[0])
-      return first ? first.clientId : null
+      const first = vulnerabilities.find(v => v.id === selectedVulns[0])
+      return first ? String(first.clientId) : null
     }
     return null
-  }, [selectedClient, selectedVulns])
+  }, [selectedClient, selectedVulns, vulnerabilities])
 
   const allowedClientName = useMemo(() => {
-    const client = mockClients.find(c => c.id === allowedClientForTicket)
+    const client = clients.find(c => String(c.id) === String(allowedClientForTicket))
     if (!client) return ''
     return client.name
-  }, [allowedClientForTicket])
+  }, [allowedClientForTicket, clients])
 
   const filteredVulnerabilitiesForTicket = useMemo(() => {
-    return mockVulnerabilities.filter(v => {
-      const assetName = mockAssets.find(a => a.id === v.assetId)?.name || ''
-      const matchesSearch = v.id.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
+    return vulnerabilities.filter(v => {
+      const assetName = assets.find(a => a.id === v.assetId)?.name || ''
+      const matchesSearch = String(v.displayId || v.id).toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
                           v.title.toLowerCase().includes(vulnSearchTerm.toLowerCase()) ||
                           assetName.toLowerCase().includes(vulnSearchTerm.toLowerCase())
       const matchesCriticality = vulnFilterCriticality === 'All' || v.criticality === vulnFilterCriticality
       const matchesStatus = vulnFilterStatus === 'All' || v.status === vulnFilterStatus
       const matchesClientScope = allowedClientForTicket
-        ? v.clientId === allowedClientForTicket
+        ? String(v.clientId) === String(allowedClientForTicket)
         : true
       return matchesSearch && matchesCriticality && matchesStatus && matchesClientScope
     })
-  }, [vulnSearchTerm, vulnFilterCriticality, vulnFilterStatus, allowedClientForTicket])
+  }, [vulnSearchTerm, vulnFilterCriticality, vulnFilterStatus, allowedClientForTicket, vulnerabilities, assets])
 
   // Автогенерация названия тикета от клиента
   const recomputeAutoTitle = () => {
@@ -139,21 +221,21 @@ const TicketsPage = ({ selectedClient }) => {
   }, [allowedClientName])
 
   const handleVulnToggle = (vulnId) => {
-    const vuln = mockVulnerabilities.find(v => v.id === vulnId)
+    const vuln = vulnerabilities.find(v => v.id === vulnId)
     if (!vuln) return
     // Если уже определён допустимый клиент, не позволяем выбирать уязвимости другого клиента
-    if (allowedClientForTicket && vuln.client !== allowedClientForTicket) {
+    if (allowedClientForTicket && String(vuln.clientId) !== String(allowedClientForTicket)) {
       return
     }
     setSelectedVulns(prev => (
-      prev.includes(vulnId)
+      prev.includes(vulnId) 
         ? prev.filter(id => id !== vulnId)
         : [...prev, vulnId]
     ))
   }
 
   const isVulnDisabled = (v) => {
-    return Boolean(allowedClientForTicket && v.client !== allowedClientForTicket)
+    return Boolean(allowedClientForTicket && String(v.clientId) !== String(allowedClientForTicket))
   }
 
   return (
@@ -205,7 +287,7 @@ const TicketsPage = ({ selectedClient }) => {
           <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-purple-400 text-sm">Всего</span>
-              <span className="text-2xl font-bold text-purple-400">{mockTickets.length}</span>
+              <span className="text-2xl font-bold text-purple-400">{tickets.length}</span>
             </div>
           </div>
         </div>
@@ -223,10 +305,6 @@ const TicketsPage = ({ selectedClient }) => {
           <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
             <div className="text-sm text-gray-400 mb-1">Исправлено</div>
             <div className="text-2xl font-bold text-green-400">{statusCounts.Fixed}</div>
-          </div>
-          <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
-            <div className="text-sm text-gray-400 mb-1">Проверено</div>
-            <div className="text-2xl font-bold text-teal-400">{statusCounts.Verified}</div>
           </div>
         </div>
       </div>
@@ -270,8 +348,6 @@ const TicketsPage = ({ selectedClient }) => {
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
               <option value="Fixed">Fixed</option>
-              <option value="Verified">Verified</option>
-              <option value="Closed">Closed</option>
             </select>
           </div>
         </div>
@@ -288,8 +364,8 @@ const TicketsPage = ({ selectedClient }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Уязвимости</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Приоритет</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Статус</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ответственный</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Клиент</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Назначен</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Дата создания</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Срок</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Действия</th>
               </tr>
@@ -297,18 +373,14 @@ const TicketsPage = ({ selectedClient }) => {
             <tbody className="divide-y divide-dark-border">
               {filteredTickets.map((ticket) => {
                 const daysUntil = getDaysUntilDue(ticket.dueDate)
-                const isOverdue = daysUntil < 0
+                const isOverdue = daysUntil !== null && daysUntil < 0
                 return (
                   <tr key={ticket.id} className="hover:bg-dark-card/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-dark-purple-secondary font-medium">{ticket.id}</span>
+                      <span className="text-dark-purple-secondary font-medium">{ticket.displayId || ticket.id}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-white">{ticket.title}</div>
-                      <div className="text-xs text-gray-400 flex items-center gap-2 mt-1">
-                        <Clock className="w-3 h-3" />
-                        {ticket.createdAt}
-                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -331,28 +403,22 @@ const TicketsPage = ({ selectedClient }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-300">{ticket.assignee}</span>
-                      </div>
+                      <span className="text-sm text-gray-300">{ticket.assigneeName || '—'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {ticket.client === 'client-a' ? 'ТехноСервис' :
-                       ticket.client === 'client-b' ? 'ФинансХост' :
-                       ticket.client === 'client-c' ? 'МедиаДиджитал' :
-                       ticket.client === 'client-d' ? 'Козлов' :
-                       ticket.client === 'client-e' ? 'РозницаПро' :
-                       ticket.client === 'client-f' ? 'ВолковГрупп' : ticket.client}
+                      {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        {isOverdue ? (
-                          <span className="text-red-400 font-medium">{Math.abs(daysUntil)} дн. просрочено</span>
-                        ) : (
-                          <span className="text-gray-300">{daysUntil} дней</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-400">{ticket.dueDate}</div>
+                      {ticket.dueDate ? (
+                        <div className="flex items-center gap-2">
+                          <Clock className={`w-4 h-4 ${isOverdue ? 'text-red-400' : daysUntil <= 3 ? 'text-yellow-400' : 'text-gray-400'}`} />
+                          <span className={`text-sm ${isOverdue ? 'text-red-400' : daysUntil <= 3 ? 'text-yellow-400' : 'text-gray-300'}`}>
+                            {new Date(ticket.dueDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-yellow-400">Срок не установлен</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
@@ -371,6 +437,10 @@ const TicketsPage = ({ selectedClient }) => {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => {
+                            setTicketToDelete(ticket)
+                            setShowDeleteConfirm(true)
+                          }}
                           className="p-2 text-red-400 hover:text-red-300 hover:bg-dark-card rounded transition-colors"
                           title="Удалить"
                         >
@@ -392,395 +462,48 @@ const TicketsPage = ({ selectedClient }) => {
       </div>
 
       {/* Ticket Detail Modal */}
-      {selectedTicket && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Ticket className="w-6 h-6 text-purple-400" />
-                <div>
-                  <h2 className="text-xl font-bold text-white">{selectedTicket.id}</h2>
-                  <p className="text-sm text-gray-400">{selectedTicket.title}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedTicket(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Main Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400">Приоритет</label>
-                  <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      priorityColors[selectedTicket.priority]
-                    } text-white`}>
-                      {selectedTicket.priority}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Статус</label>
-                  <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      statusColorsTickets[selectedTicket.status]
-                    } text-white`}>
-                      {selectedTicket.status}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Ответственный</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <select className="px-3 py-1 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm" value={selectedTicket.assignee} onChange={() => {}}>
-                      {mockWorkers.map(w => (
-                        <option key={w.id} value={w.fullName}>{w.fullName}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Автор</label>
-                  <div className="mt-1 text-white">{selectedTicket.reporter}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Клиент</label>
-                  <div className="mt-1 text-white">
-                    {selectedTicket.client === 'client-a' ? 'ТехноСервис' :
-                     selectedTicket.client === 'client-b' ? 'ФинансХост' :
-                     selectedTicket.client === 'client-c' ? 'МедиаДиджитал' :
-                     selectedTicket.client === 'client-d' ? 'Козлов' :
-                     selectedTicket.client === 'client-e' ? 'РозницаПро' :
-                     selectedTicket.client === 'client-f' ? 'ВолковГрупп' : selectedTicket.client}
-                  </div>
-                </div>
-                {/* project removed */}
-                <div>
-                  <label className="text-sm text-gray-400">Срок</label>
-                  <div className="mt-1 text-white">{selectedTicket.dueDate}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Создан</label>
-                  <div className="mt-1 text-white">{selectedTicket.createdAt}</div>
-                </div>
-              </div>
-
-              {/* Vulnerabilities */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Связанные уязвимости</label>
-                <div className="space-y-2">
-                      {getVulnerabilitiesForTicket(selectedTicket).map((vuln) => (
-                    <div key={vuln.id} className="bg-dark-card border border-dark-border rounded p-3 hover:bg-dark-card/80 cursor-pointer" onClick={() => setViewVuln(vuln)}>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm text-white font-medium">{vuln.id}</div>
-                          <div className="text-xs text-gray-400">{vuln.title}</div>
-                        </div>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          vuln.criticality === 'Critical' ? 'bg-red-600' :
-                          vuln.criticality === 'High' ? 'bg-orange-600' :
-                          vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
-                        } text-white`}>
-                          {vuln.criticality}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
-                <div className="text-white bg-dark-card p-3 rounded border border-dark-border">
-                  {selectedTicket.description}
-                </div>
-              </div>
-
-              {/* Resolution */}
-              {selectedTicket.resolution && (
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Решение</label>
-                  <div className="text-white bg-dark-card p-3 rounded border border-dark-border">
-                    {selectedTicket.resolution}
-                  </div>
-                </div>
-              )}
-
-              {/* Chat */}
-              <div>
-                <label className="text-sm text-gray-400 mb-3 block flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  История обсуждений
-                </label>
-                <div className="bg-dark-card border border-dark-border rounded-lg p-4 space-y-3 max-h-60 overflow-y-auto">
-                  {selectedTicket.chatMessages.map((msg) => (
-                    <div key={msg.id} className="pb-3 border-b border-dark-border last:border-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-white">{msg.author}</span>
-                        <span className="text-xs text-gray-400">{msg.timestamp}</span>
-                      </div>
-                      <p className="text-sm text-gray-300">{msg.message}</p>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Message Input */}
-                <div className="mt-3 flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(selectedTicket.id)}
-                    placeholder="Напишите сообщение..."
-                    className="flex-1 px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  />
-                  <button
-                    onClick={() => handleSendMessage(selectedTicket.id)}
-                    className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
-                  >
-                    Отправить
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TicketDetailModal
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        workers={workers}
+        clients={clients}
+        vulnerabilities={vulnerabilities}
+        onViewVulnerability={(vuln) => {
+          setViewVuln(vuln)
+          setSelectedTicket(null)
+        }}
+        onSendMessage={handleSendMessage}
+        newMessage={newMessage}
+        setNewMessage={setNewMessage}
+      />
 
       {/* View Vulnerability from Ticket */}
-      {viewVuln && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="w-6 h-6 text-yellow-400" />
-                <div>
-                  <h2 className="text-xl font-bold text-white">{viewVuln.id}</h2>
-                  <p className="text-sm text-gray-400">{viewVuln.title}</p>
-                </div>
-              </div>
-              <button onClick={() => setViewVuln(null)} className="text-gray-400 hover:text-white transition-colors">✕</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400">Актив</label>
-                  <div className="mt-1 text-white">{viewVuln.asset}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Тип актива</label>
-                  <div className="mt-1 text-white">{viewVuln.assetType}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Критичность</label>
-                  <div className="mt-1 text-white">{viewVuln.criticality}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Статус</label>
-                  <div className="mt-1 text-white">{viewVuln.status}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">CVSS</label>
-                  <div className="mt-1 text-white">{viewVuln.cvss}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Сканер</label>
-                  <div className="mt-1 text-white">{viewVuln.scanner}</div>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-400">Описание</label>
-                <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">{viewVuln.description}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <VulnerabilityDetailModal
+        vulnerability={viewVuln}
+        onClose={() => setViewVuln(null)}
+        assets={assetsForModal}
+        assetTypes={assetTypesForModal}
+        scanners={scannersForModal}
+        tickets={tickets}
+        onViewTicket={(ticket) => {
+          setViewVuln(null)
+          setSelectedTicket(ticket)
+        }}
+      />
 
       {/* Create Ticket Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full">
-            <div className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Создать новый тикет</h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Название</label>
-                <input
-                  type="text"
-                  value={autoTitle}
-                  onChange={(e) => setAutoTitle(e.target.value)}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Тикет для клиента"
-                />
-                <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
-                  <Info className="w-3 h-3" />
-                  Название автоматически формируется от клиента
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
-                  <select
-                    value={createPriority}
-                    onChange={(e) => setCreatePriority(e.target.value)}
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  >
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
-                  <input
-                    type="text"
-                    value={allowedClientName}
-                    disabled
-                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg opacity-70 cursor-not-allowed"
-                    placeholder="Определится по выбору уязвимостей или фильтру клиента"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Выберите уязвимости ({selectedVulns.length} выбрано)</label>
-                
-                {/* Search and filters */}
-                <div className="bg-dark-card border border-dark-border rounded-lg p-3 space-y-3 mb-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={vulnSearchTerm}
-                      onChange={(e) => setVulnSearchTerm(e.target.value)}
-                      placeholder="Поиск по ID, названию или активу..."
-                      className="w-full pl-10 pr-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <select
-                      value={vulnFilterCriticality}
-                      onChange={(e) => setVulnFilterCriticality(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm"
-                    >
-                      <option value="All">Все уровни</option>
-                      <option value="Critical">Critical</option>
-                      <option value="High">High</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Low">Low</option>
-                    </select>
-                    
-                    <select
-                      value={vulnFilterStatus}
-                      onChange={(e) => setVulnFilterStatus(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary text-sm"
-                    >
-                      <option value="All">Все статусы</option>
-                      <option value="Open">Open</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Fixed">Fixed</option>
-                      <option value="Verified">Verified</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Vulnerabilities list */}
-                <div className="bg-dark-card border border-dark-border rounded-lg max-h-64 overflow-y-auto p-3 space-y-2">
-                  {filteredVulnerabilitiesForTicket.length === 0 ? (
-                    <div className="text-center text-gray-400 py-4 text-sm">Уязвимости не найдены</div>
-                  ) : (
-                    filteredVulnerabilitiesForTicket.map((vuln) => (
-                      <label 
-                        key={vuln.id} 
-                        className={`flex items-start gap-3 ${isVulnDisabled(vuln) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-dark-border'} p-3 rounded border transition-colors ${
-                          selectedVulns.includes(vuln.id) ? 'border-dark-purple-primary bg-dark-purple-primary/10' : 'border-transparent'
-                        }`}
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={selectedVulns.includes(vuln.id)}
-                          onChange={() => handleVulnToggle(vuln.id)}
-                          disabled={isVulnDisabled(vuln)}
-                          className="mt-0.5 accent-dark-purple-primary" 
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-white">{vuln.id}</span>
-                            <div className="flex gap-2">
-                              <span className={`px-2 py-0.5 rounded text-xs ${
-                                vuln.criticality === 'Critical' ? 'bg-red-600' :
-                                vuln.criticality === 'High' ? 'bg-orange-600' :
-                                vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
-                              } text-white`}>
-                                {vuln.criticality}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded text-xs ${
-                                vuln.status === 'Open' ? 'bg-purple-600' :
-                                vuln.status === 'In Progress' ? 'bg-blue-600' :
-                                vuln.status === 'Fixed' ? 'bg-green-600' : 'bg-teal-600'
-                              } text-white`}>
-                                {vuln.status}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-300 mb-1">{vuln.title}</div>
-                          <div className="text-xs text-gray-400">Актив: {vuln.asset}</div>
-                          <div className="text-[10px] text-gray-500 mt-1">Клиент: {vuln.client}</div>
-                        </div>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Описание</label>
-                <textarea
-                  rows="4"
-                  value={createDescription}
-                  onChange={(e) => setCreateDescription(e.target.value)}
-                  className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-                  placeholder="Опишите проблему..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  disabled={!allowedClientForTicket || selectedVulns.length === 0}
-                >
-                  Создать тикет
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateTicketModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={(ticket) => {
+          setTickets(prev => [...prev, ticket])
+        }}
+        vulnerabilities={vulnerabilities}
+        clients={clients}
+        workers={workers}
+        assets={assets}
+        tickets={tickets}
+      />
 
       {/* Edit Ticket Modal */}
       {showEditTicketModal && editTicket && (
@@ -793,12 +516,12 @@ const TicketsPage = ({ selectedClient }) => {
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Название</label>
-                <input type="text" value={editTicket.title} onChange={(e) => setEditTicket({ ...editTicket, title: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                <input type="text" value={editTicket.title || ''} onChange={(e) => setEditTicket({ ...editTicket, title: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
-                  <select value={editTicket.priority} onChange={(e) => setEditTicket({ ...editTicket, priority: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select value={editTicket.priority || 'High'} onChange={(e) => setEditTicket({ ...editTicket, priority: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
                     <option>Critical</option>
                     <option>High</option>
                     <option>Medium</option>
@@ -807,41 +530,107 @@ const TicketsPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Статус</label>
-                  <select value={editTicket.status} onChange={(e) => setEditTicket({ ...editTicket, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select value={editTicket.status || 'Open'} onChange={(e) => setEditTicket({ ...editTicket, status: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
                     <option>Open</option>
                     <option>In Progress</option>
                     <option>Fixed</option>
-                    <option>Verified</option>
-                    <option>Closed</option>
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div>
                   <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
-                  <select value={editTicket.assignee} onChange={(e) => setEditTicket({ ...editTicket, assignee: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    <option>Иванов И.И.</option>
-                    <option>Петров П.П.</option>
-                    <option>Сидоров С.С.</option>
-                    <option>Козлов К.К.</option>
-                    <option>Морозов М.М.</option>
-                    <option>Волков В.В.</option>
-                    <option>Соколов С.С.</option>
-                    <option>Лебедев Л.Л.</option>
-                  </select>
+                  <select value={editTicket.assigneeId || ''} onChange={(e) => setEditTicket({ ...editTicket, assigneeId: e.target.value ? parseInt(e.target.value) : null })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                    <option value="">— не назначен —</option>
+                    {workers.map(w => (
+                      <option key={w.id} value={w.id}>{w.fullName}</option>
+                    ))}
+                    </select>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Срок</label>
-                  <input type="date" value={editTicket.dueDate} onChange={(e) => setEditTicket({ ...editTicket, dueDate: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                  <input type="date" value={editTicket.dueDate || ''} onChange={(e) => setEditTicket({ ...editTicket, dueDate: e.target.value || null })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
                 </div>
               </div>
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Описание</label>
-                <textarea rows="4" value={editTicket.description} onChange={(e) => setEditTicket({ ...editTicket, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+                <textarea rows="4" value={editTicket.description || ''} onChange={(e) => setEditTicket({ ...editTicket, description: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Создан</label>
+                  <div className="px-4 py-2 bg-dark-card border border-dark-border text-gray-400 rounded-lg">
+                    {editTicket.createdAt ? new Date(editTicket.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Изменено</label>
+                  <div className="px-4 py-2 bg-dark-card border border-dark-border text-gray-400 rounded-lg">
+                    {editTicket.updatedAt ? new Date(editTicket.updatedAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                  </div>
+                </div>
               </div>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowEditTicketModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
-                <button onClick={() => { setTickets(prev => prev.map(t => t.id === editTicket.id ? { ...t, ...editTicket } : t)); setShowEditTicketModal(false) }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
+                <button onClick={async () => { 
+                  try {
+                    const backendData = transformTicketToBackend(editTicket)
+                    const updated = await ticketsApi.update(editTicket.id, backendData)
+                    const transformed = transformTicket(updated)
+                    setTickets(prev => prev.map(t => t.id === editTicket.id ? transformed : t))
+                    setShowEditTicketModal(false)
+                  } catch (error) {
+                    console.error('Failed to update ticket:', error)
+                    alert('Ошибка при обновлении тикета: ' + (error.message || 'Неизвестная ошибка'))
+                  }
+                }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && ticketToDelete && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-md w-full">
+            <div className="border-b border-dark-border px-6 py-4">
+              <h2 className="text-xl font-bold text-white">Подтверждение удаления</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-300 mb-4">
+                Вы уверены, что хотите удалить тикет <span className="font-semibold text-white">{ticketToDelete.displayId || ticketToDelete.id}</span>?
+              </p>
+              <p className="text-sm text-gray-400 mb-6">Это действие нельзя отменить.</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setTicketToDelete(null)
+                  }}
+                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await ticketsApi.delete(ticketToDelete.id)
+                      setTickets(prev => prev.filter(t => t.id !== ticketToDelete.id))
+                      if (selectedTicket && selectedTicket.id === ticketToDelete.id) {
+                        setSelectedTicket(null)
+                      }
+                      setShowDeleteConfirm(false)
+                      setTicketToDelete(null)
+                    } catch (error) {
+                      console.error('Failed to delete ticket:', error)
+                      alert('Ошибка при удалении тикета: ' + (error.message || 'Неизвестная ошибка'))
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Удалить
+                </button>
               </div>
             </div>
           </div>

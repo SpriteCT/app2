@@ -216,6 +216,7 @@ class Asset(Base):
     status = Column(ENUM('В эксплуатации', 'Недоступен', 'В обслуживании', 'Выведен из эксплуатации', name='asset_status', create_type=False), nullable=False)
     criticality = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
     last_scan = Column(DateTime(timezone=True), nullable=True)
+    is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -229,6 +230,7 @@ class Vulnerability(Base):
     __tablename__ = "vulnerabilities"
     
     id = Column(Integer, primary_key=True)
+    display_id = Column(Text, nullable=True, unique=True)
     client_id = Column(Integer, ForeignKey("clients.id", ondelete="RESTRICT"), nullable=False)
     asset_id = Column(Integer, ForeignKey("assets.id", ondelete="SET NULL"), nullable=True)
     title = Column(Text, nullable=False)
@@ -241,6 +243,7 @@ class Vulnerability(Base):
     cve = Column(Text, nullable=True)
     discovered = Column(Date, nullable=True)
     last_modified = Column(Date, nullable=True)
+    is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -260,6 +263,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
     
     id = Column(Integer, primary_key=True)
+    display_id = Column(Text, nullable=True, unique=True)
     client_id = Column(Integer, ForeignKey("clients.id", ondelete="RESTRICT"), nullable=False)
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
@@ -267,6 +271,7 @@ class Ticket(Base):
     reporter_id = Column(Integer, ForeignKey("workers.id", ondelete="SET NULL"), nullable=True)
     priority = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
     status = Column(ENUM('Open', 'In Progress', 'Fixed', 'Verified', 'Closed', name='ticket_status', create_type=False), nullable=False, default='Open')
+    is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     due_date = Column(Date, nullable=True)

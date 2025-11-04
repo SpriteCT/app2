@@ -1,7 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Server, Upload, Link2, AlertCircle } from 'lucide-react'
 import { 
-  mockAssets, 
   assetTypeColors, 
   statusColorsAssets, 
   criticalityColorsAssets,
@@ -9,14 +8,12 @@ import {
   assetStatuses,
   criticalityLevelsAssets
 } from '../data/mockAssets'
-import { mockVulnerabilities } from '../data/mockVulnerabilities'
-import { mockTickets } from '../data/mockTickets'
-import { mockClients } from '../data/mockClients'
-import { mockAssetTypes } from '../data/mockAssetTypes'
-import { mockScanners } from '../data/mockScanners'
 import { criticalityColors, statusColors } from '../data/mockVulnerabilities'
 import { priorityColors, statusColorsTickets } from '../data/mockTickets'
-import { mockWorkers } from '../data/mockWorkers'
+import { assetsApi, vulnerabilitiesApi, ticketsApi, clientsApi, referenceApi } from '../services/api'
+import { transformAsset, transformAssetToBackend, transformVulnerability, transformTicket } from '../utils/dataTransform'
+import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
+import TicketDetailModal from '../components/TicketDetailModal'
 
 const AssetsPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -26,33 +23,86 @@ const AssetsPage = ({ selectedClient }) => {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
-  const [assets, setAssets] = useState(mockAssets)
+  const [assets, setAssets] = useState([])
   const [showEditAssetModal, setShowEditAssetModal] = useState(false)
   const [editAsset, setEditAsset] = useState(null)
   const [selectedVulnerability, setSelectedVulnerability] = useState(null)
   const [selectedTicket, setSelectedTicket] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [vulnerabilities, setVulnerabilities] = useState([])
+  const [tickets, setTickets] = useState([])
+  const [clients, setClients] = useState([])
+  const [assetTypes, setAssetTypes] = useState([])
+  const [scanners, setScanners] = useState([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [assetToDelete, setAssetToDelete] = useState(null)
+  
+  // New asset form state
+  const [newAsset, setNewAsset] = useState({
+    name: '',
+    typeId: '',
+    ipAddress: '',
+    operatingSystem: '',
+    status: 'В эксплуатации',
+    criticality: 'High',
+    clientId: ''
+  })
+
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        const [assetsData, vulnsData, ticketsData, clientsData, assetTypesData, scannersData] = await Promise.all([
+          assetsApi.getAll(),
+          vulnerabilitiesApi.getAll(),
+          ticketsApi.getAll(),
+          clientsApi.getAll(),
+          referenceApi.getAssetTypes(),
+          referenceApi.getScanners(),
+        ])
+        setAssets(assetsData.map(transformAsset))
+        setVulnerabilities(vulnsData.map(transformVulnerability))
+        setTickets(ticketsData.map(transformTicket))
+        setClients(clientsData.map(c => ({ id: c.id, name: c.name, shortName: c.short_name })))
+        setAssetTypes(assetTypesData)
+        setScanners(scannersData)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const filteredAssets = useMemo(() => {
     return assets.filter(a => {
-      const matchesSearch = a.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = String(a.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
                           a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          a.ipAddress.toLowerCase().includes(searchTerm.toLowerCase())
-      const assetType = mockAssetTypes.find(at => at.id === a.typeId)
+                          (a.ipAddress && a.ipAddress.toLowerCase().includes(searchTerm.toLowerCase()))
+      const assetType = assetTypes.find(at => at.id === a.typeId)
       const matchesType = selectedType === 'All' || (assetType && assetType.name === selectedType)
       const matchesStatus = selectedStatus === 'All' || a.status === selectedStatus
       const matchesCriticality = selectedCriticality === 'All' || a.criticality === selectedCriticality
-      const matchesClient = selectedClient === 'client-all' || (a.clientId && a.clientId === selectedClient)
+      const matchesClient = selectedClient === 'client-all' || (a.clientId && String(a.clientId) === String(selectedClient))
 
       return matchesSearch && matchesType && matchesStatus && matchesCriticality && matchesClient
     })
-  }, [searchTerm, selectedType, selectedStatus, selectedCriticality, selectedClient, assets])
+  }, [searchTerm, selectedType, selectedStatus, selectedCriticality, selectedClient, assets, assetTypes])
 
   const getVulnerabilitiesForAsset = (asset) => {
-    return mockVulnerabilities.filter(v => asset.vulnerabilities.includes(v.id))
+    if (!asset || !asset.id) return []
+    return vulnerabilities.filter(v => v.assetId === asset.id)
   }
 
   const getTicketsForAsset = (asset) => {
-    return mockTickets.filter(t => asset.tickets.includes(t.id))
+    if (!asset || !asset.id) return []
+    // Find tickets that have vulnerabilities linked to this asset
+    return tickets.filter(t => {
+      if (!t.vulnerabilities || !Array.isArray(t.vulnerabilities)) return false
+      return t.vulnerabilities.some(v => v.assetId === asset.id)
+    })
   }
 
   return (
@@ -83,38 +133,45 @@ const AssetsPage = ({ selectedClient }) => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 border border-green-500/30 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-green-400 text-sm">В эксплуатации</span>
-              <span className="text-2xl font-bold text-green-400">
-                {mockAssets.filter(a => a.status === 'В эксплуатации').length}
-              </span>
+        {(() => {
+          const filtered = selectedClient === 'client-all' 
+            ? assets 
+            : assets.filter(a => String(a.clientId) === String(selectedClient))
+          return (
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 border border-green-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-green-400 text-sm">В эксплуатации</span>
+                  <span className="text-2xl font-bold text-green-400">
+                    {filtered.filter(a => a.status === 'В эксплуатации').length}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-red-400 text-sm">Недоступен</span>
+                  <span className="text-2xl font-bold text-red-400">
+                    {filtered.filter(a => a.status === 'Недоступен').length}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-gray-600/20 to-gray-800/20 border border-gray-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Выведен из эксп.</span>
+                  <span className="text-2xl font-bold text-gray-400">
+                    {filtered.filter(a => a.status === 'Выведен из эксплуатации').length}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-blue-400 text-sm">Всего активов</span>
+                  <span className="text-2xl font-bold text-blue-400">{filtered.length}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-red-400 text-sm">Недоступен</span>
-              <span className="text-2xl font-bold text-red-400">
-                {mockAssets.filter(a => a.status === 'Недоступен').length}
-              </span>
-            </div>
-          </div>
-          <div className="bg-gradient-to-br from-gray-600/20 to-gray-800/20 border border-gray-500/30 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm">Выведен из эксп.</span>
-              <span className="text-2xl font-bold text-gray-400">
-                {mockAssets.filter(a => a.status === 'Выведен из эксплуатации').length}
-              </span>
-            </div>
-          </div>
-          <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-blue-400 text-sm">Всего активов</span>
-              <span className="text-2xl font-bold text-blue-400">{mockAssets.length}</span>
-            </div>
-          </div>
-        </div>
+          )
+        })()}
       </div>
 
       {/* Filters */}
@@ -140,8 +197,9 @@ const AssetsPage = ({ selectedClient }) => {
               onChange={(e) => setSelectedType(e.target.value)}
               className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
             >
+              <option value="All">Все типы</option>
               {assetTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+                <option key={type.id} value={type.name}>{type.name}</option>
               ))}
             </select>
             
@@ -182,7 +240,9 @@ const AssetsPage = ({ selectedClient }) => {
           <table className="w-full">
             <thead className="bg-dark-card border-b border-dark-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">ID</th>
+                {selectedClient === 'client-all' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Клиент</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Имя</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Тип</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">IP</th>
@@ -194,18 +254,33 @@ const AssetsPage = ({ selectedClient }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border">
-              {filteredAssets.map((asset) => (
-                <tr key={asset.id} className="hover:bg-dark-card/50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-dark-purple-secondary font-medium">{asset.id}</span>
+              {loading ? (
+                <tr>
+                  <td colSpan={selectedClient === 'client-all' ? 9 : 8} className="px-6 py-8 text-center text-gray-400">
+                    Загрузка...
                   </td>
+                </tr>
+              ) : filteredAssets.length === 0 ? (
+                <tr>
+                  <td colSpan={selectedClient === 'client-all' ? 9 : 8} className="px-6 py-8 text-center text-gray-400">
+                    Активы не найдены
+                  </td>
+                </tr>
+              ) : (
+                filteredAssets.map((asset) => (
+                <tr key={asset.id} className="hover:bg-dark-card/50 transition-colors">
+                  {selectedClient === 'client-all' && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {clients.find(c => String(c.id) === String(asset.clientId))?.name || '—'}
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <div className="text-sm text-white">{asset.name}</div>
                     <div className="text-xs text-gray-400">{asset.operatingSystem}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
-                      const assetType = mockAssetTypes.find(at => at.id === asset.typeId)
+                      const assetType = assetTypes.find(at => at.id === asset.typeId)
                       const typeName = assetType?.name || '-'
                       return (
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -236,11 +311,11 @@ const AssetsPage = ({ selectedClient }) => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-yellow-400" />
-                      <span className="text-sm text-gray-300">{asset.vulnerabilities.length}</span>
+                      <span className="text-sm text-gray-300">{getVulnerabilitiesForAsset(asset).length}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {asset.lastScan}
+                    {asset.lastScan ? new Date(asset.lastScan).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
@@ -259,6 +334,10 @@ const AssetsPage = ({ selectedClient }) => {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => {
+                          setAssetToDelete(asset)
+                          setShowDeleteConfirm(true)
+                        }}
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-dark-card rounded transition-colors"
                         title="Удалить"
                       >
@@ -267,7 +346,8 @@ const AssetsPage = ({ selectedClient }) => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
@@ -305,7 +385,7 @@ const AssetsPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400">Тип</label>
                   <div className="mt-1">
                     {(() => {
-                      const assetType = mockAssetTypes.find(at => at.id === selectedAsset.typeId)
+                      const assetType = assetTypes.find(at => at.id === selectedAsset.typeId)
                       const typeName = assetType?.name || '-'
                       return (
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${assetTypeColors[typeName] || 'bg-gray-600'} text-white`}>
@@ -343,16 +423,16 @@ const AssetsPage = ({ selectedClient }) => {
                 {/* Department removed by schema alignment */}
                 <div>
                   <label className="text-sm text-gray-400">Последнее сканирование</label>
-                  <div className="mt-1 text-white">{selectedAsset.lastScan}</div>
+                  <div className="mt-1 text-white">{selectedAsset.lastScan ? new Date(selectedAsset.lastScan).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</div>
                 </div>
               </div>
 
               {/* Vulnerabilities */}
-              {selectedAsset.vulnerabilities.length > 0 && (
+              {getVulnerabilitiesForAsset(selectedAsset).length > 0 && (
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    Связанные уязвимости ({selectedAsset.vulnerabilities.length})
+                    Связанные уязвимости ({getVulnerabilitiesForAsset(selectedAsset).length})
                   </label>
                   <div className="space-y-2">
                     {getVulnerabilitiesForAsset(selectedAsset).map((vuln) => (
@@ -363,7 +443,7 @@ const AssetsPage = ({ selectedClient }) => {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm text-white font-medium">{vuln.id}</div>
+                            <div className="text-sm text-white font-medium">{vuln.displayId || vuln.id}</div>
                             <div className="text-xs text-gray-400">{vuln.title}</div>
                           </div>
                           <span className={`px-2 py-1 rounded text-xs ${
@@ -381,11 +461,11 @@ const AssetsPage = ({ selectedClient }) => {
               )}
 
               {/* Tickets */}
-              {selectedAsset.tickets.length > 0 && (
+              {getTicketsForAsset(selectedAsset).length > 0 && (
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
-                    Связанные тикеты ({selectedAsset.tickets.length})
+                    Связанные тикеты ({getTicketsForAsset(selectedAsset).length})
                   </label>
                   <div className="space-y-2">
                     {getTicketsForAsset(selectedAsset).map((ticket) => (
@@ -396,7 +476,7 @@ const AssetsPage = ({ selectedClient }) => {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm text-white font-medium">{ticket.id}</div>
+                            <div className="text-sm text-white font-medium">{ticket.displayId || ticket.id}</div>
                             <div className="text-xs text-gray-400">{ticket.title}</div>
                           </div>
                           <span className={`px-2 py-1 rounded text-xs ${
@@ -436,6 +516,8 @@ const AssetsPage = ({ selectedClient }) => {
                 <label className="text-sm text-gray-400 mb-2 block">Имя актива</label>
                 <input
                   type="text"
+                  value={newAsset.name}
+                  onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
                   className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
                   placeholder="server.example.com"
                 />
@@ -444,9 +526,13 @@ const AssetsPage = ({ selectedClient }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип</label>
-                  <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select 
+                    value={newAsset.typeId} 
+                    onChange={(e) => setNewAsset({ ...newAsset, typeId: e.target.value ? parseInt(e.target.value) : '' })} 
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                  >
                     <option value="">— выберите тип —</option>
-                    {mockAssetTypes.map(type => (
+                    {assetTypes.map(type => (
                       <option key={type.id} value={type.id}>{type.name}</option>
                     ))}
                   </select>
@@ -455,6 +541,8 @@ const AssetsPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400 mb-2 block">IP Адрес</label>
                   <input
                     type="text"
+                    value={newAsset.ipAddress}
+                    onChange={(e) => setNewAsset({ ...newAsset, ipAddress: e.target.value })}
                     className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
                     placeholder="192.168.1.10"
                   />
@@ -464,7 +552,11 @@ const AssetsPage = ({ selectedClient }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
-                  <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select 
+                    value={newAsset.criticality} 
+                    onChange={(e) => setNewAsset({ ...newAsset, criticality: e.target.value })} 
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                  >
                     <option>Critical</option>
                     <option>High</option>
                     <option>Medium</option>
@@ -473,7 +565,11 @@ const AssetsPage = ({ selectedClient }) => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Статус</label>
-                  <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select 
+                    value={newAsset.status} 
+                    onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })} 
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                  >
                     <option>В эксплуатации</option>
                     <option>Недоступен</option>
                     <option>В обслуживании</option>
@@ -487,14 +583,21 @@ const AssetsPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400 mb-2 block">ОС</label>
                   <input
                     type="text"
+                    value={newAsset.operatingSystem}
+                    onChange={(e) => setNewAsset({ ...newAsset, operatingSystem: e.target.value })}
                     className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
                     placeholder="Ubuntu 22.04"
                   />
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
-                  <select className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
-                    {mockClients.filter(c => !c.isDefault).map(c => (
+                  <select 
+                    value={newAsset.clientId} 
+                    onChange={(e) => setNewAsset({ ...newAsset, clientId: e.target.value ? parseInt(e.target.value) : '' })} 
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+                  >
+                    <option value="">— выберите клиента —</option>
+                    {clients.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
@@ -514,7 +617,32 @@ const AssetsPage = ({ selectedClient }) => {
                   Отмена
                 </button>
                 <button
-                  onClick={() => setShowAddModal(false)}
+                  onClick={async () => {
+                    if (!newAsset.name || !newAsset.typeId || !newAsset.clientId) {
+                      alert('Заполните все обязательные поля: имя, тип и клиент')
+                      return
+                    }
+                    
+                    try {
+                      const backendData = transformAssetToBackend(newAsset)
+                      const created = await assetsApi.create(backendData)
+                      const transformed = transformAsset(created)
+                      setAssets(prev => [...prev, transformed])
+                      setShowAddModal(false)
+                      setNewAsset({
+                        name: '',
+                        typeId: '',
+                        ipAddress: '',
+                        operatingSystem: '',
+                        status: 'В эксплуатации',
+                        criticality: 'High',
+                        clientId: ''
+                      })
+                    } catch (error) {
+                      console.error('Failed to create asset:', error)
+                      alert('Ошибка при создании актива: ' + (error.message || 'Неизвестная ошибка'))
+                    }
+                  }}
                   className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors"
                 >
                   Добавить актив
@@ -541,9 +669,9 @@ const AssetsPage = ({ selectedClient }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Тип</label>
-                  <select value={editAsset.typeId || ''} onChange={(e) => setEditAsset({ ...editAsset, typeId: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
+                  <select value={editAsset.typeId || ''} onChange={(e) => setEditAsset({ ...editAsset, typeId: e.target.value ? parseInt(e.target.value) : '' })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary">
                     <option value="">— выберите тип —</option>
-                    {mockAssetTypes.map(type => (
+                    {assetTypes.map(type => (
                       <option key={type.id} value={type.id}>{type.name}</option>
                     ))}
                   </select>
@@ -578,10 +706,30 @@ const AssetsPage = ({ selectedClient }) => {
                   <label className="text-sm text-gray-400 mb-2 block">ОС</label>
                   <input type="text" value={editAsset.operatingSystem} onChange={(e) => setEditAsset({ ...editAsset, operatingSystem: e.target.value })} className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" />
                 </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Последнее сканирование</label>
+                  <input 
+                    type="date" 
+                    value={editAsset.lastScan ? new Date(editAsset.lastScan).toISOString().slice(0, 10) : ''} 
+                    onChange={(e) => setEditAsset({ ...editAsset, lastScan: e.target.value ? new Date(e.target.value + 'T00:00:00').toISOString() : null })} 
+                    className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowEditAssetModal(false)} className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors">Отмена</button>
-                <button onClick={() => { setAssets(prev => prev.map(a => a.id === editAsset.id ? { ...a, ...editAsset } : a)); setShowEditAssetModal(false) }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
+                <button onClick={async () => { 
+                  try {
+                    const backendData = transformAssetToBackend(editAsset)
+                    const updated = await assetsApi.update(editAsset.id, backendData)
+                    const transformed = transformAsset(updated)
+                    setAssets(prev => prev.map(a => a.id === editAsset.id ? transformed : a))
+                    setShowEditAssetModal(false)
+                  } catch (error) {
+                    console.error('Failed to update asset:', error)
+                    alert('Ошибка при обновлении актива: ' + (error.message || 'Неизвестная ошибка'))
+                  }
+                }} className="px-4 py-2 bg-dark-purple-primary text-white rounded-lg hover:bg-dark-purple-secondary transition-colors">Сохранить</button>
               </div>
             </div>
           </div>
@@ -652,177 +800,80 @@ const AssetsPage = ({ selectedClient }) => {
       )}
 
       {/* Vulnerability Detail Modal */}
-      {selectedVulnerability && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-6 h-6 text-red-400" />
-                <h2 className="text-xl font-bold text-white">Детали уязвимости</h2>
-              </div>
-              <button
-                onClick={() => setSelectedVulnerability(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400">ID</label>
-                  <div className="mt-1 text-white font-medium">{selectedVulnerability.id}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Название</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.title}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Актив</label>
-                  <div className="mt-1 text-white">
-                    {mockAssets.find(a => a.id === selectedVulnerability.assetId)?.name || '-'}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Тип актива</label>
-                  <div className="mt-1 text-white">
-                    {mockAssetTypes.find(at => at.id === selectedVulnerability.assetTypeId)?.name || '-'}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Критичность</label>
-                  <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      criticalityColors[selectedVulnerability.criticality]
-                    } text-white`}>
-                      {selectedVulnerability.criticality}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Статус</label>
-                  <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      statusColors[selectedVulnerability.status]
-                    } text-white`}>
-                      {selectedVulnerability.status}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">CVSS</label>
-                  <div className="mt-1 text-white font-semibold">{selectedVulnerability.cvss}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">CVE</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.cve || '-'}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Сканер</label>
-                  <div className="mt-1 text-white">
-                    {mockScanners.find(s => s.id === selectedVulnerability.scannerId)?.name || '-'}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Обнаружена</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.discovered}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Изменена</label>
-                  <div className="mt-1 text-white">{selectedVulnerability.lastModified}</div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-400">Описание</label>
-                <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">
-                  {selectedVulnerability.description}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <VulnerabilityDetailModal
+        vulnerability={selectedVulnerability}
+        onClose={() => setSelectedVulnerability(null)}
+        assets={assets}
+        assetTypes={assetTypes}
+        scanners={scanners}
+        tickets={tickets}
+        onViewTicket={(ticket) => {
+          setSelectedVulnerability(null)
+          setSelectedTicket(ticket)
+        }}
+      />
 
       {/* Ticket Detail Modal */}
-      {selectedTicket && (
+      <TicketDetailModal
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        workers={[]}
+        clients={clients}
+        vulnerabilities={vulnerabilities}
+        onViewVulnerability={(vuln) => {
+          setSelectedTicket(null)
+          setSelectedVulnerability(vuln)
+        }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && assetToDelete && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Link2 className="w-6 h-6 text-purple-400" />
-                <h2 className="text-xl font-bold text-white">Детали тикета</h2>
-              </div>
-              <button
-                onClick={() => setSelectedTicket(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-md w-full">
+            <div className="border-b border-dark-border px-6 py-4">
+              <h2 className="text-xl font-bold text-white">Подтверждение удаления</h2>
             </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400">ID</label>
-                  <div className="mt-1 text-white font-medium">{selectedTicket.id}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Название</label>
-                  <div className="mt-1 text-white">{selectedTicket.title}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Приоритет</label>
-                  <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      priorityColors[selectedTicket.priority]
-                    } text-white`}>
-                      {selectedTicket.priority}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Статус</label>
-                  <div className="mt-1">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      statusColorsTickets[selectedTicket.status]
-                    } text-white`}>
-                      {selectedTicket.status}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Исполнитель</label>
-                  <div className="mt-1 text-white">
-                    {selectedTicket.assigneeId ? mockWorkers.find(w => w.id === selectedTicket.assigneeId)?.fullName || '-' : '-'}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Создан</label>
-                  <div className="mt-1 text-white">{selectedTicket.createdAt}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Срок выполнения</label>
-                  <div className="mt-1 text-white">{selectedTicket.dueDate || '-'}</div>
-                </div>
+            <div className="p-6">
+              <p className="text-gray-300 mb-4">
+                Вы уверены, что хотите удалить актив <span className="font-semibold text-white">{assetToDelete.id}</span>?
+              </p>
+              <p className="text-sm text-gray-400 mb-6">Это действие нельзя отменить.</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setAssetToDelete(null)
+                  }}
+                  className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg hover:bg-dark-border transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await assetsApi.delete(assetToDelete.id)
+                      setAssets(prev => prev.filter(asset => asset.id !== assetToDelete.id))
+                      if (selectedAsset && selectedAsset.id === assetToDelete.id) {
+                        setSelectedAsset(null)
+                      }
+                      setShowDeleteConfirm(false)
+                      setAssetToDelete(null)
+                    } catch (error) {
+                      console.error('Failed to delete asset:', error)
+                      const errorMessage = error.message || 'Неизвестная ошибка'
+                      // Проверяем, не связан ли актив с тикетами через уязвимости
+                      if (errorMessage.includes('ticket') || errorMessage.includes('linked to')) {
+                        alert('Нельзя удалить актив: его уязвимости привязаны к одному или нескольким тикетам.')
+                      } else {
+                        alert('Ошибка при удалении актива: ' + errorMessage)
+                      }
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Удалить
+                </button>
               </div>
-
-              <div>
-                <label className="text-sm text-gray-400">Описание</label>
-                <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">
-                  {selectedTicket.description}
-                </div>
-              </div>
-
-              {selectedTicket.resolution && (
-                <div>
-                  <label className="text-sm text-gray-400">Резолюция</label>
-                  <div className="mt-1 text-white bg-dark-card p-3 rounded border border-dark-border">
-                    {selectedTicket.resolution}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
