@@ -150,9 +150,7 @@ function App() {
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="text-white font-medium">{client.shortName}</div>
-                              {!client.isDefault && (
-                                <div className="text-xs text-gray-400">{client.name}</div>
-                              )}
+                              <div className="text-xs text-gray-400">{client.name}</div>
                             </div>
                             {selectedClient === client.id && (
                               <span className="text-dark-purple-primary">✓</span>

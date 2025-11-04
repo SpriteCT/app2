@@ -27,7 +27,6 @@ export const transformClient = (backendClient) => {
       onPremise: backendClient.infra_on_prem !== undefined ? backendClient.infra_on_prem : true,
     },
     notes: backendClient.notes,
-    isDefault: backendClient.is_default || false,
     additionalContacts: (backendClient.additional_contacts || []).map(contact => ({
       id: contact.id,
       name: contact.name,
@@ -63,7 +62,6 @@ export const transformClientToBackend = (frontendClient) => {
     infra_cloud: frontendClient.infraCloud !== undefined ? frontendClient.infraCloud : true,
     infra_on_prem: frontendClient.infraOnPrem !== undefined ? frontendClient.infraOnPrem : true,
     notes: frontendClient.notes,
-    is_default: frontendClient.isDefault || false,
     additional_contacts: (frontendClient.additionalContacts || []).map(contact => ({
       name: contact.name,
       role: contact.role,
@@ -89,7 +87,6 @@ export const transformProject = (backendProject) => {
     startDate: backendProject.start_date,
     endDate: backendProject.end_date,
     budget: backendProject.budget ? parseFloat(backendProject.budget) : null,
-    progress: backendProject.progress || 0,
     team: (backendProject.team_members || []).map(member => member.worker?.full_name || ''),
     teamMemberIds: (backendProject.team_members || []).map(member => member.worker_id),
   }
@@ -122,7 +119,6 @@ export const transformProjectToBackend = (frontendProject) => {
     start_date: startDate,
     end_date: endDate,
     budget: frontendProject.budget ? String(frontendProject.budget) : null,
-    progress: frontendProject.progress || 0,
     team_member_ids: frontendProject.teamMemberIds || [],
   }
 }

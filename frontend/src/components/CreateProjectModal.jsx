@@ -41,7 +41,6 @@ const CreateProjectModal = ({
         clientId: clientId,
         status: 'Active',
         budget: newProject.budget ? Number(newProject.budget) : null,
-        progress: 0,
         teamMemberIds: [],
       }
       const backendData = transformProjectToBackend(projectData)

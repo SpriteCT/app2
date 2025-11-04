@@ -17,14 +17,12 @@ workers
 asset_types
 - id (pk)
 - name (text, unique)
-- description (text)
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
 scanners
 - id (pk)
 - name (text, unique)
-- description (text)
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
@@ -46,7 +44,6 @@ clients
 - infra_cloud (boolean)            // cloudServices
 - infra_on_prem (boolean)         // onPremise
 - notes (text)
-- is_default (boolean)            // optional
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
@@ -71,7 +68,6 @@ projects
 - start_date (date)
 - end_date (date)
 - budget (numeric)
-- progress (smallint) // 0..100
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
@@ -104,7 +100,6 @@ vulnerabilities
 - asset_id (fk -> assets.id on delete set null)
 - title (text)
 - description (text)
-- asset_type_id (fk -> asset_types.id on delete set null)
 - scanner_id (fk -> scanners.id on delete set null)
 - status (enum: Open|In Progress|Fixed|Verified)
 - criticality (enum: Critical|High|Medium|Low)

@@ -91,7 +91,6 @@ class AssetType(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False, unique=True)
-    description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -101,7 +100,6 @@ class Scanner(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False, unique=True)
-    description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -126,7 +124,6 @@ class Client(Base):
     infra_cloud = Column(Boolean, nullable=False, default=True)
     infra_on_prem = Column(Boolean, nullable=False, default=True)
     notes = Column(Text, nullable=True)
-    is_default = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -171,7 +168,6 @@ class Project(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     budget = Column(Numeric, nullable=True)
-    progress = Column(SmallInteger, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -182,7 +178,6 @@ class Project(Base):
     
     __table_args__ = (
         CheckConstraint("start_date <= end_date", name="chk_project_dates"),
-        CheckConstraint("progress >= 0 AND progress <= 100", name="chk_project_progress"),
     )
 
 
@@ -235,7 +230,6 @@ class Vulnerability(Base):
     asset_id = Column(Integer, ForeignKey("assets.id", ondelete="SET NULL"), nullable=True)
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
-    asset_type_id = Column(Integer, ForeignKey("asset_types.id", ondelete="SET NULL"), nullable=True)
     scanner_id = Column(Integer, ForeignKey("scanners.id", ondelete="SET NULL"), nullable=True)
     status = Column(ENUM('Open', 'In Progress', 'Fixed', 'Verified', name='vuln_status', create_type=False), nullable=False)
     criticality = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
@@ -250,7 +244,6 @@ class Vulnerability(Base):
     # Relationships
     client = relationship("Client", back_populates="vulnerabilities")
     asset = relationship("Asset", back_populates="vulnerabilities")
-    asset_type = relationship("AssetType")
     scanner = relationship("Scanner")
     ticket_vulnerabilities = relationship("TicketVulnerability", back_populates="vulnerability")
     

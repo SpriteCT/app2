@@ -52,11 +52,9 @@ const ClientsPage = () => {
 
   const filteredClients = useMemo(() => {
     return clients.filter(c => 
-      !c.isDefault && (
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.industry.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.industry.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [searchTerm, clients])
 
@@ -194,7 +192,7 @@ const ClientsPage = () => {
       </div>
 
       {/* Client Detail Modal */}
-      {selectedClient && !selectedClient.isDefault && (
+      {selectedClient && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-surface border border-dark-border rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-dark-surface border-b border-dark-border px-6 py-4 flex items-center justify-between">

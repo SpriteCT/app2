@@ -42,7 +42,6 @@ class Worker(WorkerBase, TimestampMixin):
 # Asset Type schemas
 class AssetTypeBase(BaseModel):
     name: str
-    description: Optional[str] = None
 
 
 class AssetTypeCreate(AssetTypeBase):
@@ -51,7 +50,6 @@ class AssetTypeCreate(AssetTypeBase):
 
 class AssetTypeUpdate(AssetTypeBase):
     name: Optional[str] = None
-    description: Optional[str] = None
 
 
 class AssetType(AssetTypeBase, TimestampMixin):
@@ -63,7 +61,6 @@ class AssetType(AssetTypeBase, TimestampMixin):
 # Scanner schemas
 class ScannerBase(BaseModel):
     name: str
-    description: Optional[str] = None
 
 
 class ScannerCreate(ScannerBase):
@@ -72,7 +69,6 @@ class ScannerCreate(ScannerBase):
 
 class ScannerUpdate(ScannerBase):
     name: Optional[str] = None
-    description: Optional[str] = None
 
 
 class Scanner(ScannerBase, TimestampMixin):
@@ -122,7 +118,6 @@ class ClientBase(BaseModel):
     infra_cloud: bool = True
     infra_on_prem: bool = True
     notes: Optional[str] = None
-    is_default: bool = False
 
 
 class ClientCreate(ClientBase):
@@ -146,7 +141,6 @@ class ClientUpdate(BaseModel):
     infra_cloud: Optional[bool] = None
     infra_on_prem: Optional[bool] = None
     notes: Optional[str] = None
-    is_default: Optional[bool] = None
 
 
 class Client(ClientBase, TimestampMixin):
@@ -183,7 +177,6 @@ class ProjectBase(BaseModel):
     start_date: date
     end_date: date
     budget: Optional[float] = None
-    progress: int = Field(0, ge=0, le=100)
 
 
 class ProjectCreate(ProjectBase):
@@ -200,7 +193,6 @@ class ProjectUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     budget: Optional[float] = None
-    progress: Optional[int] = Field(None, ge=0, le=100)
     team_member_ids: Optional[List[int]] = None
 
 
@@ -286,7 +278,6 @@ class Vulnerability(VulnerabilityBase, TimestampMixin):
     is_deleted: bool = False
     client: Optional[Client] = None
     asset: Optional[Asset] = None
-    asset_type: Optional[AssetType] = None
     scanner: Optional[Scanner] = None
     
     model_config = ConfigDict(from_attributes=True)

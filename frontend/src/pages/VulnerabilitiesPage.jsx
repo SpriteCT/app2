@@ -352,18 +352,18 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
       <AddVulnerabilityModal
         isOpen={showAddModal}
         onClose={() => {
-          setShowAddModal(false)
-          setNewVuln({
-            title: '',
-            clientId: '',
-            assetId: null,
-            scannerId: null,
-            criticality: 'High',
-            status: 'Open',
-            cvss: null,
-            cve: '',
-            description: '',
-          })
+                      setShowAddModal(false)
+                      setNewVuln({
+                        title: '',
+                        clientId: '',
+                        assetId: null,
+                        scannerId: null,
+                        criticality: 'High',
+                        status: 'Open',
+                        cvss: null,
+                        cve: '',
+                        description: '',
+                      })
           setAssetSearch('')
         }}
         onCreate={(transformed) => {
@@ -379,7 +379,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         onUpdate={(transformed) => {
-          setVulns(prev => prev.map(x => x.id === transformed.id ? transformed : x))
+                    setVulns(prev => prev.map(x => x.id === transformed.id ? transformed : x))
         }}
         vulnerability={editVuln}
         assets={assets}

@@ -13,33 +13,33 @@ INSERT INTO workers (id, full_name, email, phone) VALUES
 (8, 'Лебедев Л.Л.', 'lebedev@company.ru', '+7 (495) 111-11-18');
 
 -- ============ ASSET TYPES ============
-INSERT INTO asset_types (id, name, description) VALUES
-(1, 'Web Server', 'Веб-сервер'),
-(2, 'Application Server', 'Сервер приложений'),
-(3, 'Database Server', 'Сервер базы данных'),
-(4, 'File Server', 'Файловый сервер'),
-(5, 'Web Application', 'Веб-приложение'),
-(6, 'API Server', 'API сервер'),
-(7, 'Linux Server', 'Linux сервер'),
-(8, 'Backup Server', 'Сервер резервного копирования');
+INSERT INTO asset_types (id, name) VALUES
+(1, 'Web Server'),
+(2, 'Application Server'),
+(3, 'Database Server'),
+(4, 'File Server'),
+(5, 'Web Application'),
+(6, 'API Server'),
+(7, 'Linux Server'),
+(8, 'Backup Server');
 
 -- ============ SCANNERS ============
-INSERT INTO scanners (id, name, description) VALUES
-(1, 'Nessus', 'Nessus Vulnerability Scanner'),
-(2, 'OpenVAS', 'Open Vulnerability Assessment Scanner'),
-(3, 'Penetration Test', 'Ручной пентест'),
-(4, 'Metasploit', 'Metasploit Framework'),
-(5, 'Burp Suite', 'Burp Suite Professional'),
-(6, 'Qualys', 'Qualys VMDR');
+INSERT INTO scanners (id, name) VALUES
+(1, 'Nessus'),
+(2, 'OpenVAS'),
+(3, 'Penetration Test'),
+(4, 'Metasploit'),
+(5, 'Burp Suite'),
+(6, 'Qualys');
 
 -- ============ CLIENTS ============
-INSERT INTO clients (id, name, short_name, industry, contact_person, position, phone, email, sla, security_level, contract_number, contract_date, contract_expiry, billing_cycle, infra_cloud, infra_on_prem, notes, is_default) VALUES
-(1, 'ООО "ТехноСервис"', 'TSV', 'IT-инфраструктура', 'Иванов Иван Иванович', 'Директор по безопасности', '+7 (495) 123-45-67', 'ivanov@technoservice.ru', 'Premium', 'Critical', 'TS-2024-001', '2024-01-15', '2025-01-15', 'Monthly', TRUE, TRUE, 'Крупный IT-интегратор с критической инфраструктурой. Требует постоянного мониторинга.', FALSE),
-(2, 'АО "ФинансХост"', 'FNH', 'Финансовые услуги', 'Петров Петр Петрович', 'Руководитель информационной безопасности', '+7 (495) 234-56-78', 'petrov@finhost.ru', 'Standard', 'Critical', 'FH-2024-015', '2024-01-10', '2025-01-10', 'Quarterly', FALSE, TRUE, 'Финансовая организация. Особое внимание к комплаенсу и безопасности данных.', FALSE),
-(3, 'ООО "МедиаДиджитал"', 'MDD', 'Медиа', 'Сидоров С.С.', NULL, '+7 (495) 345-67-89', 'sidorov@mediadigital.ru', 'Basic', 'High', 'MD-2024-008', NULL, NULL, 'Monthly', FALSE, FALSE, NULL, FALSE),
-(4, 'ИП Козлов К.К.', 'KZL', 'Консалтинг', 'Козлов К.К.', NULL, '+7 (495) 456-78-90', 'kozlov@example.ru', 'Basic', 'High', 'KZ-2024-003', NULL, NULL, 'Monthly', FALSE, FALSE, NULL, FALSE),
-(5, 'ООО "РозницаПро"', 'RZP', 'Розничная торговля', 'Морозов М.М.', NULL, '+7 (495) 567-89-01', 'morozov@retailpro.ru', 'Standard', 'High', 'RT-2024-022', NULL, NULL, 'Monthly', FALSE, FALSE, NULL, FALSE),
-(6, 'ЗАО "ВолковГрупп"', 'VGP', 'Промышленность', 'Волков В.В.', NULL, '+7 (495) 678-90-12', 'volkov@volkovgrp.ru', 'Premium', 'High', 'VG-2024-005', NULL, NULL, 'Monthly', FALSE, FALSE, NULL, FALSE);
+INSERT INTO clients (id, name, short_name, industry, contact_person, position, phone, email, sla, security_level, contract_number, contract_date, contract_expiry, billing_cycle, infra_cloud, infra_on_prem, notes) VALUES
+(1, 'ООО "ТехноСервис"', 'TSV', 'IT-инфраструктура', 'Иванов Иван Иванович', 'Директор по безопасности', '+7 (495) 123-45-67', 'ivanov@technoservice.ru', 'Premium', 'Critical', 'TS-2024-001', '2024-01-15', '2025-01-15', 'Monthly', TRUE, TRUE, 'Крупный IT-интегратор с критической инфраструктурой. Требует постоянного мониторинга.'),
+(2, 'АО "ФинансХост"', 'FNH', 'Финансовые услуги', 'Петров Петр Петрович', 'Руководитель информационной безопасности', '+7 (495) 234-56-78', 'petrov@finhost.ru', 'Standard', 'Critical', 'FH-2024-015', '2024-01-10', '2025-01-10', 'Quarterly', FALSE, TRUE, 'Финансовая организация. Особое внимание к комплаенсу и безопасности данных.'),
+(3, 'ООО "МедиаДиджитал"', 'MDD', 'Медиа', 'Сидоров С.С.', NULL, '+7 (495) 345-67-89', 'sidorov@mediadigital.ru', 'Basic', 'High', 'MD-2024-008', NULL, NULL, 'Monthly', FALSE, FALSE, NULL),
+(4, 'ИП Козлов К.К.', 'KZL', 'Консалтинг', 'Козлов К.К.', NULL, '+7 (495) 456-78-90', 'kozlov@example.ru', 'Basic', 'High', 'KZ-2024-003', NULL, NULL, 'Monthly', FALSE, FALSE, NULL),
+(5, 'ООО "РозницаПро"', 'RZP', 'Розничная торговля', 'Морозов М.М.', NULL, '+7 (495) 567-89-01', 'morozov@retailpro.ru', 'Standard', 'High', 'RT-2024-022', NULL, NULL, 'Monthly', FALSE, FALSE, NULL),
+(6, 'ЗАО "ВолковГрупп"', 'VGP', 'Промышленность', 'Волков В.В.', NULL, '+7 (495) 678-90-12', 'volkov@volkovgrp.ru', 'Premium', 'High', 'VG-2024-005', NULL, NULL, 'Monthly', FALSE, FALSE, NULL);
 
 -- ============ CLIENT ADDITIONAL CONTACTS ============
 INSERT INTO client_additional_contacts (id, client_id, name, role, phone, email) VALUES
@@ -47,13 +47,13 @@ INSERT INTO client_additional_contacts (id, client_id, name, role, phone, email)
 (2, 2, 'Сидоров Сидор Сидорович', 'Network Admin', '+7 (495) 234-56-79', 'sidorov@finhost.ru');
 
 -- ============ PROJECTS ============
-INSERT INTO projects (id, client_id, name, description, type, status, priority, start_date, end_date, budget, progress) VALUES
-(1, 1, 'Безопасность инфраструктуры', 'Регулярное сканирование инфраструктуры на уязвимости с ежемесячными отчетами', 'Vulnerability Scanning', 'Active', 'High', '2024-01-15', '2024-12-31', 1500000, 45),
-(2, 1, 'Breach and Attack Simulation', 'Симуляция атак на инфраструктуру для проверки эффективности защиты', 'BAS', 'Planning', 'High', '2024-02-01', '2024-05-01', 1200000, 0),
-(3, 2, 'Аудит безопасности', 'Глубокий пентест с фокусом на финансовые системы и базы данных', 'Penetration Test', 'Active', 'Critical', '2024-01-08', '2024-03-08', 800000, 60),
-(4, 3, 'Сканирование сетевое', 'Непрерывное сканирование сети на открытые порты и сетевое оборудование', 'Network Scanning', 'Active', 'Medium', '2024-01-05', '2024-06-05', 500000, 30),
-(5, 5, 'Web Security Audit', 'Сканирование веб-приложений на SQL Injection, XSS и другие уязвимости', 'Web Application Scanning', 'Active', 'Medium', '2024-01-14', '2024-04-14', 600000, 70),
-(6, 6, 'Compliance Check', 'Проверка соответствия стандартам ISO 27001, GDPR', 'Compliance Check', 'Active', 'High', '2024-01-08', '2024-03-08', 900000, 55);
+INSERT INTO projects (id, client_id, name, description, type, status, priority, start_date, end_date, budget) VALUES
+(1, 1, 'Безопасность инфраструктуры', 'Регулярное сканирование инфраструктуры на уязвимости с ежемесячными отчетами', 'Vulnerability Scanning', 'Active', 'High', '2024-01-15', '2024-12-31', 1500000),
+(2, 1, 'Breach and Attack Simulation', 'Симуляция атак на инфраструктуру для проверки эффективности защиты', 'BAS', 'Planning', 'High', '2024-02-01', '2024-05-01', 1200000),
+(3, 2, 'Аудит безопасности', 'Глубокий пентест с фокусом на финансовые системы и базы данных', 'Penetration Test', 'Active', 'Critical', '2024-01-08', '2024-03-08', 800000),
+(4, 3, 'Сканирование сетевое', 'Непрерывное сканирование сети на открытые порты и сетевое оборудование', 'Network Scanning', 'Active', 'Medium', '2024-01-05', '2024-06-05', 500000),
+(5, 5, 'Web Security Audit', 'Сканирование веб-приложений на SQL Injection, XSS и другие уязвимости', 'Web Application Scanning', 'Active', 'Medium', '2024-01-14', '2024-04-14', 600000),
+(6, 6, 'Compliance Check', 'Проверка соответствия стандартам ISO 27001, GDPR', 'Compliance Check', 'Active', 'High', '2024-01-08', '2024-03-08', 900000);
 
 -- ============ PROJECT TEAM MEMBERS ============
 INSERT INTO project_team_members (id, project_id, worker_id) VALUES
@@ -84,15 +84,15 @@ INSERT INTO assets (id, client_id, name, type_id, ip_address, operating_system, 
 (10, 1, 'old-web-server.legacy', 1, '192.168.1.255', 'CentOS 6', 'Выведен из эксплуатации', 'Low', '2023-06-15 16:00:00+00');
 
 -- ============ VULNERABILITIES ============
-INSERT INTO vulnerabilities (id, display_id, client_id, asset_id, title, description, asset_type_id, scanner_id, status, criticality, cvss, cve, discovered, last_modified, is_deleted) VALUES
-(1, 'V-TSV-1', 1, 1, 'SQL Injection в параметре поиска', 'Обнаружена уязвимость SQL Injection в параметре поиска', 1, 1, 'Open', 'Critical', 9.8, 'CVE-2023-1234', '2024-01-15', '2024-01-20', FALSE),
-(2, 'V-TSV-2', 1, 2, 'Устаревшая версия Apache Tomcat', 'Используется Apache Tomcat версии 8.5.29, уязвимая к CVE-2023-45133', 2, 2, 'In Progress', 'High', 7.5, 'CVE-2023-45133', '2024-01-10', '2024-01-22', FALSE),
-(3, 'V-MDD-1', 3, 3, 'Слабая политика паролей', 'Обнаружены слабые пароли у нескольких учетных записей', 3, 3, 'Fixed', 'Medium', 5.3, NULL, '2024-01-05', '2024-01-18', FALSE),
-(4, 'V-KZL-1', 4, 4, 'Открытые порты 445/139 (SMB)', 'SMB порты доступны из внешней сети', 4, 1, 'Open', 'High', 8.8, NULL, '2024-01-12', '2024-01-19', FALSE),
-(5, 'V-RZP-1', 5, 5, 'Missing Security Headers', 'Отсутствуют заголовки безопасности X-Frame-Options, CSP', 5, 2, 'Open', 'Low', 2.5, NULL, '2024-01-14', '2024-01-21', FALSE),
-(6, 'V-VGP-1', 6, 6, 'Уязвимость в библиотеке Log4j', 'Log4j версия 2.14.0 уязвима к CVE-2021-44228', 6, 1, 'Open', 'Critical', 10.0, 'CVE-2021-44228', '2024-01-08', '2024-01-20', FALSE),
-(7, 'V-FNH-1', 2, 7, 'SSRF в функционале загрузки', 'Обнаружена Server-Side Request Forgery уязвимость', 5, 3, 'Verified', 'High', 7.8, NULL, '2024-01-11', '2024-01-17', FALSE),
-(8, 'V-MDD-2', 3, 8, 'Несвоевременное обновление системных компонентов', 'Накоплено 15 критических обновлений', 7, 2, 'Open', 'Medium', 4.5, NULL, '2024-01-13', '2024-01-19', FALSE);
+INSERT INTO vulnerabilities (id, display_id, client_id, asset_id, title, description, scanner_id, status, criticality, cvss, cve, discovered, last_modified, is_deleted) VALUES
+(1, 'V-TSV-1', 1, 1, 'SQL Injection в параметре поиска', 'Обнаружена уязвимость SQL Injection в параметре поиска', 1, 'Open', 'Critical', 9.8, 'CVE-2023-1234', '2024-01-15', '2024-01-20', FALSE),
+(2, 'V-TSV-2', 1, 2, 'Устаревшая версия Apache Tomcat', 'Используется Apache Tomcat версии 8.5.29, уязвимая к CVE-2023-45133', 2, 'In Progress', 'High', 7.5, 'CVE-2023-45133', '2024-01-10', '2024-01-22', FALSE),
+(3, 'V-MDD-1', 3, 3, 'Слабая политика паролей', 'Обнаружены слабые пароли у нескольких учетных записей', 3, 'Fixed', 'Medium', 5.3, NULL, '2024-01-05', '2024-01-18', FALSE),
+(4, 'V-KZL-1', 4, 4, 'Открытые порты 445/139 (SMB)', 'SMB порты доступны из внешней сети', 1, 'Open', 'High', 8.8, NULL, '2024-01-12', '2024-01-19', FALSE),
+(5, 'V-RZP-1', 5, 5, 'Missing Security Headers', 'Отсутствуют заголовки безопасности X-Frame-Options, CSP', 2, 'Open', 'Low', 2.5, NULL, '2024-01-14', '2024-01-21', FALSE),
+(6, 'V-VGP-1', 6, 6, 'Уязвимость в библиотеке Log4j', 'Log4j версия 2.14.0 уязвима к CVE-2021-44228', 1, 'Open', 'Critical', 10.0, 'CVE-2021-44228', '2024-01-08', '2024-01-20', FALSE),
+(7, 'V-FNH-1', 2, 7, 'SSRF в функционале загрузки', 'Обнаружена Server-Side Request Forgery уязвимость', 3, 'Verified', 'High', 7.8, NULL, '2024-01-11', '2024-01-17', FALSE),
+(8, 'V-MDD-2', 3, 8, 'Несвоевременное обновление системных компонентов', 'Накоплено 15 критических обновлений', 2, 'Open', 'Medium', 4.5, NULL, '2024-01-13', '2024-01-19', FALSE);
 
 -- ============ TICKETS ============
 -- Note: due_date must be >= created_at (current date), so we use future dates

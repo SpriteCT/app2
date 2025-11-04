@@ -25,7 +25,6 @@ const AddClientModal = ({
     billingCycle: 'Monthly',
     infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true },
     notes: '',
-    isDefault: false,
   })
 
   const handleCreate = async () => {
@@ -52,7 +51,6 @@ const AddClientModal = ({
         billingCycle: 'Monthly',
         infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true },
         notes: '',
-        isDefault: false,
       })
     } catch (error) {
       console.error('Failed to create client:', error)
