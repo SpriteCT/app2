@@ -1,6 +1,6 @@
 import React from 'react'
 import { Plus } from 'lucide-react'
-import { projectTypeColors, projectStatusColors, priorityColorsProjects } from '../data/mockProjects'
+import { projectTypeColors, projectStatusColors, priorityColorsProjects } from '../config/colors'
 
 const ProjectsListModal = ({
   isOpen,

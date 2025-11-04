@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Ticket, MessageCircle } from 'lucide-react'
-import { priorityColors, statusColorsTickets } from '../data/mockTickets'
+import { priorityColors, statusColorsTickets } from '../config/colors'
 
 const TicketDetailModal = ({ 
   ticket, 

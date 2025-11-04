@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Eye, Edit, Trash2, Building2, User, Phone, Mail, FileText, Calendar, Server, Users, Target } from 'lucide-react'
-import { projectTypeColors, projectStatusColors, priorityColorsProjects } from '../data/mockProjects'
+import { projectTypeColors, projectStatusColors, priorityColorsProjects } from '../config/colors'
 import { clientsApi, projectsApi, workersApi, ganttApi } from '../services/api'
 import { transformClient, transformProject, transformWorker, transformClientToBackend, transformProjectToBackend } from '../utils/dataTransform'
 import CreateProjectModal from '../components/CreateProjectModal'

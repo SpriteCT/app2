@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, Plus, Download, Eye, Edit, Trash2, AlertTriangle, Ticket, Info } from 'lucide-react'
-import { criticalityColors, statusColors } from '../data/mockVulnerabilities'
+import { criticalityColors, statusColors } from '../config/colors'
 import { vulnerabilitiesApi, assetsApi, referenceApi, clientsApi, ticketsApi, workersApi } from '../services/api'
 import { transformVulnerability, transformAsset, transformTicket, transformVulnerabilityToBackend, transformWorker } from '../utils/dataTransform'
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'

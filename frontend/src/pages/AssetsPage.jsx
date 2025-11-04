@@ -4,12 +4,11 @@ import {
   assetTypeColors, 
   statusColorsAssets, 
   criticalityColorsAssets,
-  assetTypes,
   assetStatuses,
   criticalityLevelsAssets
-} from '../data/mockAssets'
-import { criticalityColors, statusColors } from '../data/mockVulnerabilities'
-import { priorityColors, statusColorsTickets } from '../data/mockTickets'
+} from '../config/colors'
+import { criticalityColors, statusColors } from '../config/colors'
+import { priorityColors, statusColorsTickets } from '../config/colors'
 import { assetsApi, vulnerabilitiesApi, ticketsApi, clientsApi, referenceApi } from '../services/api'
 import { transformAsset, transformAssetToBackend, transformVulnerability, transformTicket } from '../utils/dataTransform'
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'

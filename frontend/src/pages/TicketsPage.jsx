@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Ticket, MessageCircle, Clock, User, Shield, Server, Info } from 'lucide-react'
-import { priorityColors, statusColorsTickets } from '../data/mockTickets'
+import { priorityColors, statusColorsTickets } from '../config/colors'
 import { ticketsApi, workersApi, vulnerabilitiesApi, clientsApi, assetsApi, referenceApi } from '../services/api'
 import { transformTicket, transformWorker, transformVulnerability, transformTicketToBackend, transformAsset } from '../utils/dataTransform'
 import TicketDetailModal from '../components/TicketDetailModal'
