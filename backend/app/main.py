@@ -47,9 +47,10 @@ async def startup_event():
                 # Don't fail startup, just log the warning
 
 # CORS middleware for frontend
+# Allow requests from frontend (both direct and through nginx proxy)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+    allow_origins=["*"],  # Allow all origins since nginx handles the proxy
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
