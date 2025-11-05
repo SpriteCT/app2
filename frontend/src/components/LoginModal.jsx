@@ -101,7 +101,7 @@ const LoginModal = ({ onLogin }) => {
           <div className="text-xs text-gray-500 text-center pt-2 space-y-1">
             <p>Пароль по умолчанию для всех пользователей:</p>
             <p><code className="bg-dark-card px-2 py-1 rounded text-yellow-400">password123</code></p>
-            <p className="text-gray-600 mt-2">Примеры email: <span className="text-gray-400">ivanov@company.ru</span>, <span className="text-gray-400">petrov@company.ru</span></p>
+            <p className="text-gray-600 mt-2">Пример email: <span className="text-gray-400">ivanov@company.ru</span></p>
           </div>
         </form>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { ticketsApi } from '../services/api'
+import { ticketsApi, referenceApi } from '../services/api'
 import { transformTicket, transformTicketToBackend } from '../utils/dataTransform'
 
 const EditTicketModal = ({
@@ -10,6 +10,26 @@ const EditTicketModal = ({
   workers = []
 }) => {
   const [editTicket, setEditTicket] = useState(null)
+  const [ticketStatuses, setTicketStatuses] = useState([])
+  const [priorityLevels, setPriorityLevels] = useState([])
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadReferenceData = async () => {
+        try {
+          const [statuses, priorities] = await Promise.all([
+            referenceApi.getTicketStatuses(),
+            referenceApi.getPriorityLevels(),
+          ])
+          setTicketStatuses(statuses)
+          setPriorityLevels(priorities)
+        } catch (error) {
+          console.error('Failed to load reference data:', error)
+        }
+      }
+      loadReferenceData()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (ticket) {
@@ -68,26 +88,27 @@ const EditTicketModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select 
-                value={editTicket.priority || 'High'} 
-                onChange={(e) => setEditTicket({ ...editTicket, priority: e.target.value })} 
+                value={editTicket.priorityId || ''} 
+                onChange={(e) => setEditTicket({ ...editTicket, priorityId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+                <option value="">— выберите приоритет —</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Статус</label>
               <select 
-                value={editTicket.status || 'Open'} 
-                onChange={(e) => setEditTicket({ ...editTicket, status: e.target.value })} 
+                value={editTicket.statusId || ''} 
+                onChange={(e) => setEditTicket({ ...editTicket, statusId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Open</option>
-                <option>In Progress</option>
-                <option>Closed</option>
+                <option value="">— выберите статус —</option>
+                {ticketStatuses.map(status => (
+                  <option key={status.id} value={status.id}>{status.name}</option>
+                ))}
               </select>
             </div>
           </div>

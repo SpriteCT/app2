@@ -1,76 +1,52 @@
 """
 SQLAlchemy models for all database tables
 """
-from sqlalchemy import Column, String, Text, Date, DateTime, Numeric, SmallInteger, Boolean, ForeignKey, CheckConstraint, UniqueConstraint, Enum as SQLEnum, Integer
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy import Column, String, Text, Date, DateTime, Numeric, SmallInteger, Boolean, ForeignKey, CheckConstraint, UniqueConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
-import enum
 from app.database import Base
 
 
-# Enums
-class ProjectType(str, enum.Enum):
-    VULNERABILITY_SCANNING = "Vulnerability Scanning"
-    PENETRATION_TEST = "Penetration Test"
-    NETWORK_SCANNING = "Network Scanning"
-    BAS = "BAS"
-    WEB_APPLICATION_SCANNING = "Web Application Scanning"
-    COMPLIANCE_CHECK = "Compliance Check"
-
-
-class ProjectStatus(str, enum.Enum):
-    ACTIVE = "Active"
-    PLANNING = "Planning"
-    ON_HOLD = "On Hold"
-    COMPLETED = "Completed"
-    CANCELLED = "Cancelled"
-
-
-class PriorityType(str, enum.Enum):
-    CRITICAL = "Critical"
-    HIGH = "High"
-    MEDIUM = "Medium"
-    LOW = "Low"
-
-
-class AssetStatus(str, enum.Enum):
-    IN_OPERATION = "В эксплуатации"
-    UNAVAILABLE = "Недоступен"
-    IN_MAINTENANCE = "В обслуживании"
-    DECOMMISSIONED = "Выведен из эксплуатации"
-
-
-class VulnStatus(str, enum.Enum):
-    OPEN = "Open"
-    IN_PROGRESS = "In Progress"
-    CLOSED = "Closed"
-
-
-class TicketStatus(str, enum.Enum):
-    OPEN = "Open"
-    IN_PROGRESS = "In Progress"
-    CLOSED = "Closed"
-
-
 # Models
-class UserAccount(Base):
-    __tablename__ = "user_accounts"
+class User(Base):
+    __tablename__ = "users"
     
     id = Column(Integer, primary_key=True)
-    username = Column(Text, nullable=False, unique=True)
-    password_hash = Column(Text, nullable=True)  # Для будущей авторизации
-    full_name = Column(Text, nullable=False)
-    email = Column(Text, nullable=True)
-    phone = Column(Text, nullable=True)
-    user_type = Column(ENUM('client', 'worker', name='user_type', create_type=False), nullable=False, default='worker')
-    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=True)
+    password_hash = Column(Text, nullable=True)
+    email = Column(Text, nullable=False, unique=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
-    client = relationship("Client", back_populates="user_accounts")
+    client_profile = relationship("ClientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    worker_profile = relationship("WorkerProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+
+class ClientProfile(Base):
+    __tablename__ = "client_profiles"
+    
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    contact_name = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    user = relationship("User", back_populates="client_profile")
+    client = relationship("Client", back_populates="client_profiles")
+
+
+class WorkerProfile(Base):
+    __tablename__ = "worker_profiles"
+    
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    full_name = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    user = relationship("User", back_populates="worker_profile")
 
 
 class AssetType(Base):
@@ -84,6 +60,61 @@ class AssetType(Base):
 
 class Scanner(Base):
     __tablename__ = "scanners"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+# Reference tables (replacing ENUMs)
+class ProjectType(Base):
+    __tablename__ = "project_types"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ProjectStatus(Base):
+    __tablename__ = "project_statuses"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class PriorityLevel(Base):
+    __tablename__ = "priority_levels"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class AssetStatus(Base):
+    __tablename__ = "asset_statuses"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class VulnStatus(Base):
+    __tablename__ = "vuln_statuses"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class TicketStatus(Base):
+    __tablename__ = "ticket_statuses"
     
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False, unique=True)
@@ -109,7 +140,7 @@ class Client(Base):
     contacts = relationship("ClientContact", back_populates="client", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="client", cascade="all, delete-orphan")
     assets = relationship("Asset", back_populates="client")
-    user_accounts = relationship("UserAccount", back_populates="client", cascade="all, delete-orphan")
+    client_profiles = relationship("ClientProfile", back_populates="client", cascade="all, delete-orphan")
     vulnerabilities = relationship("Vulnerability", back_populates="client")
     tickets = relationship("Ticket", back_populates="client")
     
@@ -142,9 +173,9 @@ class Project(Base):
     client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
-    type = Column(ENUM('Vulnerability Scanning', 'Penetration Test', 'Network Scanning', 'BAS', 'Web Application Scanning', 'Compliance Check', name='project_type', create_type=False), nullable=False)
-    status = Column(ENUM('Active', 'Planning', 'On Hold', 'Completed', 'Cancelled', name='project_status', create_type=False), nullable=False, default='Active')
-    priority = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False, default='High')
+    type_id = Column(Integer, ForeignKey("project_types.id", ondelete="RESTRICT"), nullable=False)
+    status_id = Column(Integer, ForeignKey("project_statuses.id", ondelete="RESTRICT"), nullable=False)
+    priority_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -152,6 +183,9 @@ class Project(Base):
     
     # Relationships
     client = relationship("Client", back_populates="projects")
+    type = relationship("ProjectType")
+    status = relationship("ProjectStatus")
+    priority = relationship("PriorityLevel")
     team_members = relationship("ProjectTeamMember", back_populates="project", cascade="all, delete-orphan")
     gantt_tasks = relationship("GanttTask", back_populates="project", cascade="all, delete-orphan")
     
@@ -165,16 +199,16 @@ class ProjectTeamMember(Base):
     
     id = Column(Integer, primary_key=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    user_account_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="RESTRICT"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
     project = relationship("Project", back_populates="team_members")
-    user_account = relationship("UserAccount")
+    user = relationship("User")
     
     __table_args__ = (
-        UniqueConstraint("project_id", "user_account_id", name="uq_project_team_member"),
+        UniqueConstraint("project_id", "user_id", name="uq_project_team_member"),
     )
 
 
@@ -187,8 +221,8 @@ class Asset(Base):
     type_id = Column(Integer, ForeignKey("asset_types.id", ondelete="RESTRICT"), nullable=False)
     ip_address = Column(Text, nullable=True)
     operating_system = Column(Text, nullable=True)
-    status = Column(ENUM('В эксплуатации', 'Недоступен', 'В обслуживании', 'Выведен из эксплуатации', name='asset_status', create_type=False), nullable=False)
-    criticality = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
+    status_id = Column(Integer, ForeignKey("asset_statuses.id", ondelete="RESTRICT"), nullable=False)
+    criticality_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
     last_scan = Column(DateTime(timezone=True), nullable=True)
     is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -197,6 +231,8 @@ class Asset(Base):
     # Relationships
     client = relationship("Client", back_populates="assets")
     type = relationship("AssetType")
+    status = relationship("AssetStatus")
+    criticality = relationship("PriorityLevel", foreign_keys=[criticality_id])
     vulnerabilities = relationship("Vulnerability", back_populates="asset")
 
 
@@ -210,8 +246,8 @@ class Vulnerability(Base):
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     scanner_id = Column(Integer, ForeignKey("scanners.id", ondelete="SET NULL"), nullable=True)
-    status = Column(ENUM('Open', 'In Progress', 'Closed', name='vuln_status', create_type=False), nullable=False)
-    criticality = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
+    status_id = Column(Integer, ForeignKey("vuln_statuses.id", ondelete="RESTRICT"), nullable=False)
+    criticality_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
     cvss = Column(Numeric, nullable=True)
     cve = Column(Text, nullable=True)
     discovered = Column(Date, nullable=True)
@@ -224,6 +260,8 @@ class Vulnerability(Base):
     client = relationship("Client", back_populates="vulnerabilities")
     asset = relationship("Asset", back_populates="vulnerabilities")
     scanner = relationship("Scanner")
+    status = relationship("VulnStatus")
+    criticality = relationship("PriorityLevel", foreign_keys=[criticality_id])
     ticket_vulnerabilities = relationship("TicketVulnerability", back_populates="vulnerability")
     
     __table_args__ = (
@@ -239,10 +277,10 @@ class Ticket(Base):
     client_id = Column(Integer, ForeignKey("clients.id", ondelete="RESTRICT"), nullable=False)
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
-    assignee_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
-    reporter_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
-    priority = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
-    status = Column(ENUM('Open', 'In Progress', 'Closed', name='ticket_status', create_type=False), nullable=False, default='Open')
+    assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reporter_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    priority_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
+    status_id = Column(Integer, ForeignKey("ticket_statuses.id", ondelete="RESTRICT"), nullable=False)
     is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -251,8 +289,10 @@ class Ticket(Base):
     
     # Relationships
     client = relationship("Client", back_populates="tickets")
-    assignee = relationship("UserAccount", foreign_keys=[assignee_id])
-    reporter = relationship("UserAccount", foreign_keys=[reporter_id])
+    assignee = relationship("User", foreign_keys=[assignee_id])
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    priority = relationship("PriorityLevel", foreign_keys=[priority_id])
+    status = relationship("TicketStatus")
     messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan")
     ticket_vulnerabilities = relationship("TicketVulnerability", back_populates="ticket", cascade="all, delete-orphan")
     
@@ -267,7 +307,7 @@ class TicketMessage(Base):
     
     id = Column(Integer, primary_key=True)
     ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
-    author_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -275,7 +315,7 @@ class TicketMessage(Base):
     
     # Relationships
     ticket = relationship("Ticket", back_populates="messages")
-    author = relationship("UserAccount")
+    author = relationship("User")
 
 
 class TicketVulnerability(Base):

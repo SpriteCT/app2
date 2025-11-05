@@ -111,6 +111,12 @@ export const workersApi = {
 export const referenceApi = {
   getAssetTypes: () => apiRequest('/reference/asset-types'),
   getScanners: () => apiRequest('/reference/scanners'),
+  getProjectTypes: () => apiRequest('/reference/project-types'),
+  getProjectStatuses: () => apiRequest('/reference/project-statuses'),
+  getPriorityLevels: () => apiRequest('/reference/priority-levels'),
+  getAssetStatuses: () => apiRequest('/reference/asset-statuses'),
+  getVulnStatuses: () => apiRequest('/reference/vuln-statuses'),
+  getTicketStatuses: () => apiRequest('/reference/ticket-statuses'),
 }
 
 // Gantt API

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { assetsApi } from '../services/api'
+import { assetsApi, referenceApi } from '../services/api'
 import { transformAsset, transformAssetToBackend } from '../utils/dataTransform'
 
 const EditAssetModal = ({
@@ -10,6 +10,26 @@ const EditAssetModal = ({
   assetTypes = []
 }) => {
   const [editAsset, setEditAsset] = useState(null)
+  const [assetStatuses, setAssetStatuses] = useState([])
+  const [priorityLevels, setPriorityLevels] = useState([])
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadReferenceData = async () => {
+        try {
+          const [statuses, priorities] = await Promise.all([
+            referenceApi.getAssetStatuses(),
+            referenceApi.getPriorityLevels(),
+          ])
+          setAssetStatuses(statuses)
+          setPriorityLevels(priorities)
+        } catch (error) {
+          console.error('Failed to load reference data:', error)
+        }
+      }
+      loadReferenceData()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (asset) {
@@ -79,27 +99,27 @@ const EditAssetModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
               <select 
-                value={editAsset.criticality} 
-                onChange={(e) => setEditAsset({ ...editAsset, criticality: e.target.value })} 
+                value={editAsset.criticalityId || ''} 
+                onChange={(e) => setEditAsset({ ...editAsset, criticalityId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+                <option value="">— выберите критичность —</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Статус</label>
               <select 
-                value={editAsset.status} 
-                onChange={(e) => setEditAsset({ ...editAsset, status: e.target.value })} 
+                value={editAsset.statusId || ''} 
+                onChange={(e) => setEditAsset({ ...editAsset, statusId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>В эксплуатации</option>
-                <option>Недоступен</option>
-                <option>В обслуживании</option>
-                <option>Выведен из эксплуатации</option>
+                <option value="">— выберите статус —</option>
+                {assetStatuses.map(status => (
+                  <option key={status.id} value={status.id}>{status.name}</option>
+                ))}
               </select>
             </div>
           </div>

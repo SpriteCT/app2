@@ -1,19 +1,30 @@
 """
-API routes for reference data (asset types, scanners)
+API routes for reference data (asset types, scanners, and reference tables replacing ENUMs)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.models import AssetType, Scanner
+from app.models import (
+    AssetType, Scanner,
+    ProjectType, ProjectStatus,
+    PriorityLevel, AssetStatus,
+    VulnStatus, TicketStatus
+)
 from app.schemas import (
     AssetType as AssetTypeSchema,
     AssetTypeCreate,
     AssetTypeUpdate,
     Scanner as ScannerSchema,
     ScannerCreate,
-    ScannerUpdate
+    ScannerUpdate,
+    ProjectType as ProjectTypeSchema,
+    ProjectStatus as ProjectStatusSchema,
+    PriorityLevel as PriorityLevelSchema,
+    AssetStatus as AssetStatusSchema,
+    VulnStatus as VulnStatusSchema,
+    TicketStatus as TicketStatusSchema
 )
 
 router = APIRouter(prefix="/reference", tags=["reference"])
@@ -161,4 +172,76 @@ def delete_scanner(scanner_id: int, db: Session = Depends(get_db)):
     db.delete(db_scanner)
     db.commit()
     return None
+
+
+# Project Types routes
+@router.get("/project-types", response_model=List[ProjectTypeSchema])
+def get_project_types(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all project types"""
+    project_types = db.query(ProjectType).offset(skip).limit(limit).all()
+    return project_types
+
+
+# Project Statuses routes
+@router.get("/project-statuses", response_model=List[ProjectStatusSchema])
+def get_project_statuses(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all project statuses"""
+    project_statuses = db.query(ProjectStatus).offset(skip).limit(limit).all()
+    return project_statuses
+
+
+# Priority Levels routes
+@router.get("/priority-levels", response_model=List[PriorityLevelSchema])
+def get_priority_levels(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all priority levels"""
+    priority_levels = db.query(PriorityLevel).offset(skip).limit(limit).all()
+    return priority_levels
+
+
+# Asset Statuses routes
+@router.get("/asset-statuses", response_model=List[AssetStatusSchema])
+def get_asset_statuses(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all asset statuses"""
+    asset_statuses = db.query(AssetStatus).offset(skip).limit(limit).all()
+    return asset_statuses
+
+
+# Vulnerability Statuses routes
+@router.get("/vuln-statuses", response_model=List[VulnStatusSchema])
+def get_vuln_statuses(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all vulnerability statuses"""
+    vuln_statuses = db.query(VulnStatus).offset(skip).limit(limit).all()
+    return vuln_statuses
+
+
+# Ticket Statuses routes
+@router.get("/ticket-statuses", response_model=List[TicketStatusSchema])
+def get_ticket_statuses(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all ticket statuses"""
+    ticket_statuses = db.query(TicketStatus).offset(skip).limit(limit).all()
+    return ticket_statuses
 

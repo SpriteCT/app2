@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { projectsApi } from '../services/api'
+import React, { useState, useEffect } from 'react'
+import { projectsApi, referenceApi } from '../services/api'
 import { transformProject, transformProjectToBackend } from '../utils/dataTransform'
 
 const CreateProjectModal = ({ 
@@ -8,15 +8,49 @@ const CreateProjectModal = ({
   onCreate, 
   clientId 
 }) => {
+  const [projectTypes, setProjectTypes] = useState([])
+  const [projectStatuses, setProjectStatuses] = useState([])
+  const [priorityLevels, setPriorityLevels] = useState([])
   const [newProject, setNewProject] = useState({
     name: '',
-    type: 'Vulnerability Scanning',
-    priority: 'High',
+    typeId: null,
+    priorityId: null,
     description: '',
     startDate: '',
     endDate: '',
     team: [],
   })
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadReferenceData = async () => {
+        try {
+          const [types, statuses, priorities] = await Promise.all([
+            referenceApi.getProjectTypes(),
+            referenceApi.getProjectStatuses(),
+            referenceApi.getPriorityLevels(),
+          ])
+          setProjectTypes(types)
+          setProjectStatuses(statuses)
+          setPriorityLevels(priorities)
+          
+          // Set defaults
+          const defaultType = types.find(t => t.name === 'Vulnerability Scanning')
+          const defaultPriority = priorities.find(p => p.name === 'High')
+          const defaultStatus = statuses.find(s => s.name === 'Active')
+          setNewProject(prev => ({
+            ...prev,
+            typeId: defaultType?.id || (types[0]?.id),
+            priorityId: defaultPriority?.id || (priorities[0]?.id),
+            statusId: defaultStatus?.id || (statuses[0]?.id),
+          }))
+        } catch (error) {
+          console.error('Failed to load reference data:', error)
+        }
+      }
+      loadReferenceData()
+    }
+  }, [isOpen])
 
   const handleCreate = async () => {
     if (!clientId) {
@@ -29,6 +63,10 @@ const CreateProjectModal = ({
       alert('Пожалуйста, укажите название проекта')
       return
     }
+    if (!newProject.typeId || !newProject.priorityId || !newProject.statusId) {
+      alert('Пожалуйста, выберите тип проекта, приоритет и статус')
+      return
+    }
     if (!newProject.startDate || !newProject.endDate) {
       alert('Пожалуйста, укажите даты начала и окончания проекта')
       return
@@ -38,7 +76,6 @@ const CreateProjectModal = ({
       const projectData = {
         ...newProject,
         clientId: clientId,
-        status: 'Active',
         teamMemberIds: [],
       }
       const backendData = transformProjectToBackend(projectData)
@@ -55,8 +92,8 @@ const CreateProjectModal = ({
   const handleClose = () => {
     setNewProject({
       name: '',
-      type: 'Vulnerability Scanning',
-      priority: 'High',
+      typeId: null,
+      priorityId: null,
       description: '',
       startDate: '',
       endDate: '',
@@ -96,29 +133,27 @@ const CreateProjectModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Тип проекта</label>
               <select
-                value={newProject.type}
-                onChange={(e) => setNewProject({...newProject, type: e.target.value})}
+                value={newProject.typeId || ''}
+                onChange={(e) => setNewProject({...newProject, typeId: e.target.value ? parseInt(e.target.value) : null})}
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Vulnerability Scanning</option>
-                <option>Penetration Test</option>
-                <option>Network Scanning</option>
-                <option>BAS</option>
-                <option>Web Application Scanning</option>
-                <option>Compliance Check</option>
+                <option value="">— выберите тип —</option>
+                {projectTypes.map(type => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select
-                value={newProject.priority}
-                onChange={(e) => setNewProject({...newProject, priority: e.target.value})}
+                value={newProject.priorityId || ''}
+                onChange={(e) => setNewProject({...newProject, priorityId: e.target.value ? parseInt(e.target.value) : null})}
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+                <option value="">— выберите приоритет —</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                ))}
               </select>
             </div>
           </div>

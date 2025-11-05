@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { assetsApi } from '../services/api'
+import React, { useState, useEffect } from 'react'
+import { assetsApi, referenceApi } from '../services/api'
 import { transformAsset, transformAssetToBackend } from '../utils/dataTransform'
 
 const AddAssetModal = ({
@@ -9,19 +9,52 @@ const AddAssetModal = ({
   clients = [],
   assetTypes = []
 }) => {
+  const [assetStatuses, setAssetStatuses] = useState([])
+  const [priorityLevels, setPriorityLevels] = useState([])
   const [newAsset, setNewAsset] = useState({
     name: '',
     typeId: '',
     ipAddress: '',
     operatingSystem: '',
-    status: 'В эксплуатации',
-    criticality: 'High',
+    statusId: null,
+    criticalityId: null,
     clientId: ''
   })
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadReferenceData = async () => {
+        try {
+          const [statuses, priorities] = await Promise.all([
+            referenceApi.getAssetStatuses(),
+            referenceApi.getPriorityLevels(),
+          ])
+          setAssetStatuses(statuses)
+          setPriorityLevels(priorities)
+          
+          // Set defaults
+          const defaultStatus = statuses.find(s => s.name === 'В эксплуатации')
+          const defaultCriticality = priorities.find(p => p.name === 'High')
+          setNewAsset(prev => ({
+            ...prev,
+            statusId: defaultStatus?.id || (statuses[0]?.id),
+            criticalityId: defaultCriticality?.id || (priorities[0]?.id),
+          }))
+        } catch (error) {
+          console.error('Failed to load reference data:', error)
+        }
+      }
+      loadReferenceData()
+    }
+  }, [isOpen])
 
   const handleCreate = async () => {
     if (!newAsset.name || !newAsset.typeId || !newAsset.clientId) {
       alert('Заполните все обязательные поля: имя, тип и клиент')
+      return
+    }
+    if (!newAsset.statusId || !newAsset.criticalityId) {
+      alert('Пожалуйста, выберите статус и критичность')
       return
     }
     
@@ -36,8 +69,8 @@ const AddAssetModal = ({
         typeId: '',
         ipAddress: '',
         operatingSystem: '',
-        status: 'В эксплуатации',
-        criticality: 'High',
+        statusId: null,
+        criticalityId: null,
         clientId: ''
       })
     } catch (error) {
@@ -103,27 +136,27 @@ const AddAssetModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
               <select 
-                value={newAsset.criticality} 
-                onChange={(e) => setNewAsset({ ...newAsset, criticality: e.target.value })} 
+                value={newAsset.criticalityId || ''} 
+                onChange={(e) => setNewAsset({ ...newAsset, criticalityId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+                <option value="">— выберите критичность —</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Статус</label>
               <select 
-                value={newAsset.status} 
-                onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })} 
+                value={newAsset.statusId || ''} 
+                onChange={(e) => setNewAsset({ ...newAsset, statusId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>В эксплуатации</option>
-                <option>Недоступен</option>
-                <option>В обслуживании</option>
-                <option>Выведен из эксплуатации</option>
+                <option value="">— выберите статус —</option>
+                {assetStatuses.map(status => (
+                  <option key={status.id} value={status.id}>{status.name}</option>
+                ))}
               </select>
             </div>
           </div>

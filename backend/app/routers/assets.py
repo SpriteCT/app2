@@ -2,7 +2,7 @@
 API routes for assets management
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime, timezone
 
@@ -26,7 +26,11 @@ def get_assets(
     db: Session = Depends(get_db)
 ):
     """Get all assets, optionally filtered by client or type"""
-    query = db.query(Asset).filter(Asset.is_deleted == False)
+    query = db.query(Asset).filter(Asset.is_deleted == False).options(
+        joinedload(Asset.type),
+        joinedload(Asset.status),
+        joinedload(Asset.criticality)
+    )
     if client_id:
         query = query.filter(Asset.client_id == client_id)
     if type_id:
@@ -38,7 +42,11 @@ def get_assets(
 @router.get("/{asset_id}", response_model=AssetSchema)
 def get_asset(asset_id: int, db: Session = Depends(get_db)):
     """Get a specific asset by ID"""
-    asset = db.query(Asset).filter(Asset.id == asset_id, Asset.is_deleted == False).first()
+    asset = db.query(Asset).filter(Asset.id == asset_id, Asset.is_deleted == False).options(
+        joinedload(Asset.type),
+        joinedload(Asset.status),
+        joinedload(Asset.criticality)
+    ).first()
     if not asset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

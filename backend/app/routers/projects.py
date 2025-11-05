@@ -25,7 +25,12 @@ def get_projects(
     db: Session = Depends(get_db)
 ):
     """Get all projects, optionally filtered by client"""
-    query = db.query(Project).options(joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account))
+    query = db.query(Project).options(
+        joinedload(Project.type),
+        joinedload(Project.status),
+        joinedload(Project.priority),
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
+    )
     if client_id:
         query = query.filter(Project.client_id == client_id)
     projects = query.offset(skip).limit(limit).all()
@@ -36,7 +41,10 @@ def get_projects(
 def get_project(project_id: int, db: Session = Depends(get_db)):
     """Get a specific project by ID"""
     project = db.query(Project).options(
-        joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account)
+        joinedload(Project.type),
+        joinedload(Project.status),
+        joinedload(Project.priority),
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     ).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
@@ -67,7 +75,7 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
         for user_account_id in project.team_member_ids:
             db_team_member = ProjectTeamMember(
                 project_id=db_project.id,
-                user_account_id=user_account_id
+                user_id=user_account_id
             )
             db.add(db_team_member)
     
@@ -75,7 +83,10 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
     db.refresh(db_project)
     # Загружаем связанные данные для возврата
     db_project = db.query(Project).options(
-        joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account)
+        joinedload(Project.type),
+        joinedload(Project.status),
+        joinedload(Project.priority),
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     ).filter(Project.id == db_project.id).first()
     return db_project
 
@@ -111,7 +122,7 @@ def update_project(
             for user_account_id in project_update.team_member_ids:
                 db_team_member = ProjectTeamMember(
                     project_id=project_id,
-                    user_account_id=user_account_id
+                    user_id=user_account_id
                 )
                 db.add(db_team_member)
     
@@ -119,7 +130,10 @@ def update_project(
     db.refresh(db_project)
     # Загружаем связанные данные для возврата
     db_project = db.query(Project).options(
-        joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account)
+        joinedload(Project.type),
+        joinedload(Project.status),
+        joinedload(Project.priority),
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     ).filter(Project.id == db_project.id).first()
     return db_project
 

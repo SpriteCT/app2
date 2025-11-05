@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { projectsApi } from '../services/api'
+import { projectsApi, referenceApi } from '../services/api'
 import { transformProject, transformProjectToBackend } from '../utils/dataTransform'
 import ProjectTeamEditor from './ProjectTeamEditor'
 
@@ -11,6 +11,29 @@ const EditProjectModal = ({
   workers = []
 }) => {
   const [editProject, setEditProject] = useState(null)
+  const [projectTypes, setProjectTypes] = useState([])
+  const [projectStatuses, setProjectStatuses] = useState([])
+  const [priorityLevels, setPriorityLevels] = useState([])
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadReferenceData = async () => {
+        try {
+          const [types, statuses, priorities] = await Promise.all([
+            referenceApi.getProjectTypes(),
+            referenceApi.getProjectStatuses(),
+            referenceApi.getPriorityLevels(),
+          ])
+          setProjectTypes(types)
+          setProjectStatuses(statuses)
+          setPriorityLevels(priorities)
+        } catch (error) {
+          console.error('Failed to load reference data:', error)
+        }
+      }
+      loadReferenceData()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (project) {
@@ -56,29 +79,27 @@ const EditProjectModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Тип проекта</label>
               <select 
-                value={editProject.type} 
-                onChange={(e) => setEditProject({ ...editProject, type: e.target.value })} 
+                value={editProject.typeId || ''} 
+                onChange={(e) => setEditProject({ ...editProject, typeId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Vulnerability Scanning</option>
-                <option>Penetration Test</option>
-                <option>Network Scanning</option>
-                <option>BAS</option>
-                <option>Web Application Scanning</option>
-                <option>Compliance Check</option>
+                <option value="">— выберите тип —</option>
+                {projectTypes.map(type => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select 
-                value={editProject.priority} 
-                onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} 
+                value={editProject.priorityId || ''} 
+                onChange={(e) => setEditProject({ ...editProject, priorityId: e.target.value ? parseInt(e.target.value) : null })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+                <option value="">— выберите приоритет —</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -105,15 +126,14 @@ const EditProjectModal = ({
           <div>
             <label className="text-sm text-gray-400 mb-2 block">Статус</label>
             <select 
-              value={editProject.status} 
-              onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} 
+              value={editProject.statusId || ''} 
+              onChange={(e) => setEditProject({ ...editProject, statusId: e.target.value ? parseInt(e.target.value) : null })} 
               className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
             >
-              <option>Active</option>
-              <option>Planning</option>
-              <option>On Hold</option>
-              <option>Completed</option>
-              <option>Cancelled</option>
+              <option value="">— выберите статус —</option>
+              {projectStatuses.map(status => (
+                <option key={status.id} value={status.id}>{status.name}</option>
+              ))}
             </select>
           </div>
           <div>

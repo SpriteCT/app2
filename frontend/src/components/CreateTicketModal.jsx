@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Info } from 'lucide-react'
-import { ticketsApi } from '../services/api'
+import { ticketsApi, referenceApi } from '../services/api'
 import { transformTicket, transformTicketToBackend } from '../utils/dataTransform'
 
 const CreateTicketModal = ({
@@ -16,14 +16,41 @@ const CreateTicketModal = ({
   initialClientId = null,
   initialVulnIds = []
 }) => {
+  const [priorityLevels, setPriorityLevels] = useState([])
+  const [ticketStatuses, setTicketStatuses] = useState([])
   const [autoTitle, setAutoTitle] = useState('')
-  const [createPriority, setCreatePriority] = useState('High')
+  const [createPriorityId, setCreatePriorityId] = useState(null)
+  const [createStatusId, setCreateStatusId] = useState(null)
   const [createDescription, setCreateDescription] = useState('')
   const [selectedAssigneeId, setSelectedAssigneeId] = useState(null)
   const [vulnSearchTerm, setVulnSearchTerm] = useState('')
   const [vulnFilterCriticality, setVulnFilterCriticality] = useState('All')
   const [vulnFilterStatus, setVulnFilterStatus] = useState('All')
   const [selectedVulns, setSelectedVulns] = useState(initialVulnIds)
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadReferenceData = async () => {
+        try {
+          const [priorities, statuses] = await Promise.all([
+            referenceApi.getPriorityLevels(),
+            referenceApi.getTicketStatuses(),
+          ])
+          setPriorityLevels(priorities)
+          setTicketStatuses(statuses)
+          
+          // Set defaults
+          const defaultPriority = priorities.find(p => p.name === 'High')
+          const defaultStatus = statuses.find(s => s.name === 'Open')
+          setCreatePriorityId(defaultPriority?.id || (priorities[0]?.id))
+          setCreateStatusId(defaultStatus?.id || (statuses[0]?.id))
+        } catch (error) {
+          console.error('Failed to load reference data:', error)
+        }
+      }
+      loadReferenceData()
+    }
+  }, [isOpen])
 
   // Determine allowed client
   const allowedClientForTicket = useMemo(() => {
@@ -105,14 +132,18 @@ const CreateTicketModal = ({
 
   const handleCreate = async () => {
     if (!allowedClientForTicket || (selectedVulns.length === 0 && !ticketFromVuln)) return
+    if (!createPriorityId || !createStatusId) {
+      alert('Пожалуйста, выберите приоритет и статус')
+      return
+    }
     
     try {
       const ticketData = {
         clientId: parseInt(allowedClientForTicket),
         title: autoTitle || recomputeAutoTitle() || `Тикет для клиента: ${allowedClientName}`,
         description: createDescription || (ticketFromVuln ? `Требуется устранить уязвимость ${ticketFromVuln.displayId || ticketFromVuln.id}: ${ticketFromVuln.title}` : ''),
-        priority: createPriority,
-        status: 'Open',
+        priorityId: createPriorityId,
+        statusId: createStatusId,
         assigneeId: selectedAssigneeId || null,
         reporterId: workers && workers.length > 0 ? workers[0].id : null,
         dueDate: null,
@@ -130,7 +161,10 @@ const CreateTicketModal = ({
       // Reset form
       setAutoTitle('')
       setCreateDescription('')
-      setCreatePriority('High')
+      const defaultPriority = priorityLevels.find(p => p.name === 'High')
+      const defaultStatus = ticketStatuses.find(s => s.name === 'Open')
+      setCreatePriorityId(defaultPriority?.id || (priorityLevels[0]?.id))
+      setCreateStatusId(defaultStatus?.id || (ticketStatuses[0]?.id))
       setSelectedAssigneeId(null)
       setSelectedVulns(initialVulnIds)
       setVulnSearchTerm('')
@@ -147,7 +181,10 @@ const CreateTicketModal = ({
   const handleClose = () => {
     setAutoTitle('')
     setCreateDescription('')
-    setCreatePriority('High')
+    const defaultPriority = priorityLevels.find(p => p.name === 'High')
+    const defaultStatus = ticketStatuses.find(s => s.name === 'Open')
+    setCreatePriorityId(defaultPriority?.id || (priorityLevels[0]?.id))
+    setCreateStatusId(defaultStatus?.id || (ticketStatuses[0]?.id))
     setSelectedAssigneeId(null)
     setSelectedVulns(initialVulnIds)
     setVulnSearchTerm('')
@@ -191,14 +228,14 @@ const CreateTicketModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select
-                value={createPriority}
-                onChange={(e) => setCreatePriority(e.target.value)}
+                value={createPriorityId || ''}
+                onChange={(e) => setCreatePriorityId(e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option>Critical</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+                <option value="">— выберите приоритет —</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                ))}
               </select>
             </div>
             <div>

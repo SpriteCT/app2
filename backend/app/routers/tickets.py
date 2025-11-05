@@ -34,19 +34,32 @@ def get_tickets(
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_
     # Filter out deleted tickets - check both False and NULL
+    from app.models import User
     query = db.query(Ticket).filter(or_(Ticket.is_deleted == False, Ticket.is_deleted.is_(None))).options(
         joinedload(Ticket.ticket_vulnerabilities).joinedload(TicketVulnerability.vulnerability),
-        joinedload(Ticket.messages).joinedload(TicketMessage.author),
-        joinedload(Ticket.assignee),
-        joinedload(Ticket.reporter),
+        joinedload(Ticket.messages).joinedload(TicketMessage.author).joinedload(User.client_profile),
+        joinedload(Ticket.messages).joinedload(TicketMessage.author).joinedload(User.worker_profile),
+        joinedload(Ticket.assignee).joinedload(User.client_profile),
+        joinedload(Ticket.assignee).joinedload(User.worker_profile),
+        joinedload(Ticket.reporter).joinedload(User.client_profile),
+        joinedload(Ticket.reporter).joinedload(User.worker_profile),
+        joinedload(Ticket.priority),
+        joinedload(Ticket.status),
         joinedload(Ticket.client)
     )
+    from app.models import TicketStatus, PriorityLevel
     if client_id:
         query = query.filter(Ticket.client_id == client_id)
     if status:
-        query = query.filter(Ticket.status == status)
+        # Filter by status name (find ID first)
+        status_obj = db.query(TicketStatus).filter(TicketStatus.name == status).first()
+        if status_obj:
+            query = query.filter(Ticket.status_id == status_obj.id)
     if priority:
-        query = query.filter(Ticket.priority == priority)
+        # Filter by priority name (find ID first)
+        priority_obj = db.query(PriorityLevel).filter(PriorityLevel.name == priority).first()
+        if priority_obj:
+            query = query.filter(Ticket.priority_id == priority_obj.id)
     tickets = query.offset(skip).limit(limit).all()
     print(f"Found {len(tickets)} tickets in database")
     # Ensure vulnerabilities are loaded for each ticket
@@ -63,11 +76,17 @@ def get_tickets(
 def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
     """Get a specific ticket by ID"""
     from sqlalchemy.orm import joinedload
+    from app.models import User
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id, Ticket.is_deleted == False).options(
         joinedload(Ticket.ticket_vulnerabilities).joinedload(TicketVulnerability.vulnerability),
-        joinedload(Ticket.messages).joinedload(TicketMessage.author),
-        joinedload(Ticket.assignee),
-        joinedload(Ticket.reporter),
+        joinedload(Ticket.messages).joinedload(TicketMessage.author).joinedload(User.client_profile),
+        joinedload(Ticket.messages).joinedload(TicketMessage.author).joinedload(User.worker_profile),
+        joinedload(Ticket.assignee).joinedload(User.client_profile),
+        joinedload(Ticket.assignee).joinedload(User.worker_profile),
+        joinedload(Ticket.reporter).joinedload(User.client_profile),
+        joinedload(Ticket.reporter).joinedload(User.worker_profile),
+        joinedload(Ticket.priority),
+        joinedload(Ticket.status),
         joinedload(Ticket.client)
     ).filter(Ticket.id == ticket_id).first()
     if not ticket:
@@ -149,7 +168,7 @@ def update_ticket(
     db: Session = Depends(get_db)
 ):
     """Update a ticket"""
-    from app.models import UserAccount
+    from app.models import User
     
     db_ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not db_ticket:
@@ -168,10 +187,16 @@ def update_ticket(
                 detail="Due date cannot be earlier than creation date"
             )
     
+    # Load relationships for old values
+    db.refresh(db_ticket)
+    from app.models import TicketStatus, PriorityLevel
+    
     # Store old values for change tracking
+    old_status_name = db_ticket.status.name if db_ticket.status else None
+    old_priority_name = db_ticket.priority.name if db_ticket.priority else None
     old_values = {
-        'status': db_ticket.status,
-        'priority': db_ticket.priority,
+        'status_id': db_ticket.status_id,
+        'priority_id': db_ticket.priority_id,
         'assignee_id': db_ticket.assignee_id,
         'due_date': db_ticket.due_date,
         'title': db_ticket.title,
@@ -187,21 +212,45 @@ def update_ticket(
         
         # Check if value actually changed
         if old_value != value:
-            if field == 'status':
+            if field == 'status_id':
                 status_changed = True
-                changes.append(('status', old_value, value))
-            elif field == 'priority':
-                changes.append(('priority', old_value, value))
+                # Get status names for display
+                old_status_name_for_change = old_status_name
+                new_status_obj = db.query(TicketStatus).filter(TicketStatus.id == value).first()
+                new_status_name_for_change = new_status_obj.name if new_status_obj else str(value)
+                changes.append(('status', old_status_name_for_change or str(old_value), new_status_name_for_change))
+            elif field == 'priority_id':
+                # Get priority names for display
+                old_priority_name_for_change = old_priority_name
+                new_priority_obj = db.query(PriorityLevel).filter(PriorityLevel.id == value).first()
+                new_priority_name_for_change = new_priority_obj.name if new_priority_obj else str(value)
+                changes.append(('priority', old_priority_name_for_change or str(old_value), new_priority_name_for_change))
             elif field == 'assignee_id':
                 # Get assignee names
                 old_assignee = None
                 new_assignee = None
                 if old_value:
-                    old_assignee_obj = db.query(UserAccount).filter(UserAccount.id == old_value).first()
-                    old_assignee = old_assignee_obj.full_name if old_assignee_obj else None
+                    old_assignee_obj = db.query(User).filter(User.id == old_value).first()
+                    if old_assignee_obj:
+                        if old_assignee_obj.client_profile:
+                            old_assignee = old_assignee_obj.client_profile.contact_name
+                        elif old_assignee_obj.worker_profile:
+                            old_assignee = old_assignee_obj.worker_profile.full_name
+                        else:
+                            old_assignee = None
+                    else:
+                        old_assignee = None
                 if value:
-                    new_assignee_obj = db.query(UserAccount).filter(UserAccount.id == value).first()
-                    new_assignee = new_assignee_obj.full_name if new_assignee_obj else None
+                    new_assignee_obj = db.query(User).filter(User.id == value).first()
+                    if new_assignee_obj:
+                        if new_assignee_obj.client_profile:
+                            new_assignee = new_assignee_obj.client_profile.contact_name
+                        elif new_assignee_obj.worker_profile:
+                            new_assignee = new_assignee_obj.worker_profile.full_name
+                        else:
+                            new_assignee = None
+                    else:
+                        new_assignee = None
                 changes.append(('assignee_id', old_assignee or 'не назначен', new_assignee or 'не назначен'))
             elif field == 'due_date':
                 old_due_str = old_value.strftime('%d.%m.%Y') if old_value else 'не установлен'
@@ -220,19 +269,27 @@ def update_ticket(
         setattr(db_ticket, field, value)
     
     # If status changed, update related vulnerabilities
-    if status_changed and db_ticket.status:
+    if status_changed and db_ticket.status_id:
         # Get all vulnerabilities linked to this ticket
+        from app.models import VulnStatus
         ticket_vulns = db.query(TicketVulnerability).filter(
             TicketVulnerability.ticket_id == ticket_id
         ).all()
         
-        for ticket_vuln in ticket_vulns:
-            vulnerability = db.query(Vulnerability).filter(
-                Vulnerability.id == ticket_vuln.vulnerability_id
-            ).first()
-            if vulnerability:
-                vulnerability.status = db_ticket.status
-                vulnerability.updated_at = datetime.now(timezone.utc)
+        # Map ticket status to vulnerability status
+        # "Closed" -> "Closed", "Open" -> "Open", "In Progress" -> "In Progress"
+        ticket_status_obj = db.query(TicketStatus).filter(TicketStatus.id == db_ticket.status_id).first()
+        if ticket_status_obj:
+            # Find matching vuln status by name
+            vuln_status_obj = db.query(VulnStatus).filter(VulnStatus.name == ticket_status_obj.name).first()
+            if vuln_status_obj:
+                for ticket_vuln in ticket_vulns:
+                    vulnerability = db.query(Vulnerability).filter(
+                        Vulnerability.id == ticket_vuln.vulnerability_id
+                    ).first()
+                    if vulnerability:
+                        vulnerability.status_id = vuln_status_obj.id
+                        vulnerability.updated_at = datetime.now(timezone.utc)
     
     # Update vulnerabilities if provided
     if "vulnerability_ids" in ticket_update.model_dump(exclude_unset=True):

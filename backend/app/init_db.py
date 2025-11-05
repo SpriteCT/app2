@@ -12,9 +12,15 @@ def fix_sequences():
     This should be called after bulk inserts with explicit IDs.
     """
     sequences = [
-        ('user_accounts_id_seq', 'user_accounts'),
+        ('users_id_seq', 'users'),
         ('asset_types_id_seq', 'asset_types'),
         ('scanners_id_seq', 'scanners'),
+        ('project_types_id_seq', 'project_types'),
+        ('project_statuses_id_seq', 'project_statuses'),
+        ('priority_levels_id_seq', 'priority_levels'),
+        ('asset_statuses_id_seq', 'asset_statuses'),
+        ('vuln_statuses_id_seq', 'vuln_statuses'),
+        ('ticket_statuses_id_seq', 'ticket_statuses'),
         ('clients_id_seq', 'clients'),
         ('client_contacts_id_seq', 'client_contacts'),
         ('projects_id_seq', 'projects'),
@@ -56,13 +62,19 @@ def set_default_passwords():
     with engine.begin() as conn:
         try:
             # Update all users without password (храним в чистом виде)
-            conn.execute(
-                text("UPDATE user_accounts SET password_hash = :password WHERE password_hash IS NULL"),
+            result = conn.execute(
+                text("UPDATE users SET password_hash = :password WHERE password_hash IS NULL"),
                 {"password": default_password}
             )
-            print("Default passwords set for users without passwords")
+            updated_count = result.rowcount
+            if updated_count > 0:
+                print(f"Default passwords set for {updated_count} users without passwords")
+            else:
+                print("No users needed password update")
         except Exception as e:
             print(f"Warning: Could not set default passwords: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def ensure_sequences_fixed():

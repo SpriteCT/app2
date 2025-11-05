@@ -103,7 +103,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
       const matchesCriticality = selectedCriticality === 'All' || v.criticality === selectedCriticality
       const matchesStatus = selectedStatus === 'All' || v.status === selectedStatus
       const matchesClient = selectedClient === 'client-all' || String(v.clientId) === String(selectedClient)
-      
+
       // Фильтр по связи с тикетом
       const hasTicket = vulnIdsWithTickets.has(v.id)
       const matchesTicketFilter = ticketFilter === 'All' || 

@@ -420,7 +420,7 @@ const AssetsPage = ({ selectedClient }) => {
               </div>
 
               {/* Vulnerabilities */}
-              <div>
+                <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm text-gray-400 block flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
@@ -450,13 +450,13 @@ const AssetsPage = ({ selectedClient }) => {
                             <div className="text-xs text-gray-400">{vuln.title}</div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              vuln.criticality === 'Critical' ? 'bg-red-600' :
-                              vuln.criticality === 'High' ? 'bg-orange-600' :
-                              vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
-                            } text-white`}>
-                              {vuln.criticality}
-                            </span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            vuln.criticality === 'Critical' ? 'bg-red-600' :
+                            vuln.criticality === 'High' ? 'bg-orange-600' :
+                            vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
+                          } text-white`}>
+                            {vuln.criticality}
+                          </span>
                             <span className={`px-2 py-1 rounded text-xs ${
                               statusColors[vuln.status] || 'bg-gray-600'
                             } text-white`}>
@@ -470,12 +470,12 @@ const AssetsPage = ({ selectedClient }) => {
                 ) : (
                   <div className="text-sm text-gray-500 text-center py-4">
                     {showClosedVulns ? 'Нет уязвимостей' : 'Нет открытых уязвимостей'}
-                  </div>
-                )}
+                </div>
+              )}
               </div>
 
               {/* Tickets */}
-              <div>
+                <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm text-gray-400 block flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -505,11 +505,11 @@ const AssetsPage = ({ selectedClient }) => {
                             <div className="text-xs text-gray-400">{ticket.title}</div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded text-xs ${
+                          <span className={`px-2 py-1 rounded text-xs ${
                               priorityColors[ticket.priority] || 'bg-gray-600'
-                            } text-white`}>
-                              {ticket.priority}
-                            </span>
+                          } text-white`}>
+                            {ticket.priority}
+                          </span>
                             <span className={`px-2 py-1 rounded text-xs ${
                               statusColorsTickets[ticket.status] || 'bg-gray-600'
                             } text-white`}>
@@ -523,8 +523,8 @@ const AssetsPage = ({ selectedClient }) => {
                 ) : (
                   <div className="text-sm text-gray-500 text-center py-4">
                     {showClosedTickets ? 'Нет тикетов' : 'Нет открытых тикетов'}
-                  </div>
-                )}
+                </div>
+              )}
               </div>
             </div>
           </div>
@@ -536,7 +536,7 @@ const AssetsPage = ({ selectedClient }) => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onCreate={(transformed) => {
-          setAssets(prev => [...prev, transformed])
+                      setAssets(prev => [...prev, transformed])
         }}
         clients={clients}
         assetTypes={assetTypes}

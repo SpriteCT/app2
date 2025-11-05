@@ -52,9 +52,9 @@ const ClientsPage = () => {
 
   const filteredClients = useMemo(() => {
     return clients.filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.industry.toLowerCase().includes(searchTerm.toLowerCase())
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.industry.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [searchTerm, clients])
 
@@ -243,25 +243,25 @@ const ClientsPage = () => {
                 {(() => {
                   const additionalContacts = (selectedClient.contacts || selectedClient.additionalContacts || []).filter(c => !c.isPrimary && !c.is_primary)
                   return additionalContacts.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-dark-border">
-                      <label className="text-sm text-gray-400 mb-2 block">Дополнительные контакты</label>
-                      <div className="space-y-3">
+                  <div className="mt-4 pt-4 border-t border-dark-border">
+                    <label className="text-sm text-gray-400 mb-2 block">Дополнительные контакты</label>
+                    <div className="space-y-3">
                         {additionalContacts.map((contact, idx) => (
                           <div key={contact.id || idx} className="bg-dark-card rounded p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-sm text-white">{contact.name}</div>
-                                <div className="text-xs text-gray-400">{contact.role}</div>
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                <div>{contact.phone}</div>
-                                <div>{contact.email}</div>
-                              </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm text-white">{contact.name}</div>
+                              <div className="text-xs text-gray-400">{contact.role}</div>
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              <div>{contact.phone}</div>
+                              <div>{contact.email}</div>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
+                  </div>
                   )
                 })()}
               </div>
@@ -373,8 +373,8 @@ const ClientsPage = () => {
         isOpen={showEditClientModal}
         onClose={() => setShowEditClientModal(false)}
         onUpdate={(transformed) => {
-          setClients(prev => prev.map(c => c.id === transformed.id ? transformed : c))
-          setSelectedClient(prev => (prev && prev.id === transformed.id ? transformed : prev))
+                      setClients(prev => prev.map(c => c.id === transformed.id ? transformed : c))
+                      setSelectedClient(prev => (prev && prev.id === transformed.id ? transformed : prev))
         }}
         client={editClient}
       />
@@ -384,7 +384,7 @@ const ClientsPage = () => {
         isOpen={showClientModal}
         onClose={() => setShowClientModal(false)}
         onCreate={(transformed) => {
-          setClients(prev => [transformed, ...prev])
+                      setClients(prev => [transformed, ...prev])
         }}
       />
 
@@ -403,15 +403,15 @@ const ClientsPage = () => {
       <ProjectsListModal
         isOpen={showProjectsListModal}
         onClose={() => {
-          setShowProjectsListModal(false)
-          setProjectsForClient(null)
-        }}
+                  setShowProjectsListModal(false)
+                  setProjectsForClient(null)
+                }}
         client={projectsForClient}
         projects={projects}
         onAddProject={() => {
-          setProjectsForClient(projectsForClient)
-          setShowProjectModal(true)
-        }}
+                    setProjectsForClient(projectsForClient)
+                    setShowProjectModal(true)
+                  }}
         onSelectProject={(project) => setSelectedProject(project)}
         calculateProjectProgress={calculateProjectProgress}
       />
@@ -517,8 +517,8 @@ const ClientsPage = () => {
         isOpen={showEditProjectModal}
         onClose={() => setShowEditProjectModal(false)}
         onUpdate={(transformed) => {
-          setProjects(prev => prev.map(p => p.id === transformed.id ? transformed : p))
-          setSelectedProject(prev => (prev && prev.id === transformed.id ? transformed : prev))
+                      setProjects(prev => prev.map(p => p.id === transformed.id ? transformed : p))
+                      setSelectedProject(prev => (prev && prev.id === transformed.id ? transformed : prev))
         }}
         project={editProject}
         workers={workers}
