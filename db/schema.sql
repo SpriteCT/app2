@@ -5,10 +5,6 @@
 -- ============ ENUM TYPES ============
 
 DO $$ BEGIN
-  CREATE TYPE billing_cycle_type AS ENUM ('Monthly','Quarterly','Yearly');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
   CREATE TYPE project_type AS ENUM ('Vulnerability Scanning','Penetration Test','Network Scanning','BAS','Web Application Scanning','Compliance Check');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
@@ -25,11 +21,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TYPE vuln_status AS ENUM ('Open','In Progress','Fixed','Verified');
+  CREATE TYPE vuln_status AS ENUM ('Open','In Progress','Closed');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TYPE ticket_status AS ENUM ('Open','In Progress','Fixed','Verified','Closed');
+  CREATE TYPE ticket_status AS ENUM ('Open','In Progress','Closed');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============ TABLES ============
@@ -58,7 +54,6 @@ CREATE TABLE IF NOT EXISTS clients (
   contract_number   TEXT,
   contract_date     DATE,
   contract_expiry   DATE,
-  billing_cycle     billing_cycle_type NOT NULL DEFAULT 'Monthly',
   notes             TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),

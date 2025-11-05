@@ -19,6 +19,7 @@ const CreateTicketModal = ({
   const [autoTitle, setAutoTitle] = useState('')
   const [createPriority, setCreatePriority] = useState('High')
   const [createDescription, setCreateDescription] = useState('')
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState(null)
   const [vulnSearchTerm, setVulnSearchTerm] = useState('')
   const [vulnFilterCriticality, setVulnFilterCriticality] = useState('All')
   const [vulnFilterStatus, setVulnFilterStatus] = useState('All')
@@ -40,6 +41,19 @@ const CreateTicketModal = ({
     const client = clients.find(c => String(c.id) === String(allowedClientForTicket))
     return client?.name || ''
   }, [allowedClientForTicket, clients])
+
+  // Filter assignees: workers OR clients from the same client as the ticket
+  const availableAssignees = useMemo(() => {
+    if (!allowedClientForTicket) return []
+    
+    return workers.filter(w => {
+      // Все исполнители
+      if (w.userType === 'worker') return true
+      // Только пользователи заказчика этого тикета
+      if (w.userType === 'client' && String(w.clientId) === String(allowedClientForTicket)) return true
+      return false
+    })
+  }, [workers, allowedClientForTicket])
 
   // Filter vulnerabilities for ticket creation
   const filteredVulnerabilitiesForTicket = useMemo(() => {
@@ -99,7 +113,7 @@ const CreateTicketModal = ({
         description: createDescription || (ticketFromVuln ? `Требуется устранить уязвимость ${ticketFromVuln.displayId || ticketFromVuln.id}: ${ticketFromVuln.title}` : ''),
         priority: createPriority,
         status: 'Open',
-        assigneeId: null,
+        assigneeId: selectedAssigneeId || null,
         reporterId: workers && workers.length > 0 ? workers[0].id : null,
         dueDate: null,
         vulnerabilityIds: selectedVulns.length > 0 ? selectedVulns : [ticketFromVuln.id],
@@ -117,6 +131,7 @@ const CreateTicketModal = ({
       setAutoTitle('')
       setCreateDescription('')
       setCreatePriority('High')
+      setSelectedAssigneeId(null)
       setSelectedVulns(initialVulnIds)
       setVulnSearchTerm('')
       setVulnFilterCriticality('All')
@@ -133,6 +148,7 @@ const CreateTicketModal = ({
     setAutoTitle('')
     setCreateDescription('')
     setCreatePriority('High')
+    setSelectedAssigneeId(null)
     setSelectedVulns(initialVulnIds)
     setVulnSearchTerm('')
     setVulnFilterCriticality('All')
@@ -197,6 +213,24 @@ const CreateTicketModal = ({
             </div>
           </div>
 
+          {allowedClientForTicket && (
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Ответственный</label>
+              <select
+                value={selectedAssigneeId || ''}
+                onChange={(e) => setSelectedAssigneeId(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+              >
+                <option value="">— не назначен —</option>
+                {availableAssignees.map(w => (
+                  <option key={w.id} value={w.id}>
+                    {w.fullName} {w.userType === 'worker' ? '' : '(Заказчик)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-gray-400 mb-2 block">Выберите уязвимости ({selectedVulns.length} выбрано)</label>
             
@@ -234,7 +268,7 @@ const CreateTicketModal = ({
                   <option value="All">Все статусы</option>
                   <option value="Open">Open</option>
                   <option value="In Progress">In Progress</option>
-                  <option value="Fixed">Fixed</option>
+                  <option value="Closed">Closed</option>
                 </select>
               </div>
             </div>
@@ -272,7 +306,7 @@ const CreateTicketModal = ({
                           <span className={`px-2 py-0.5 rounded text-xs ${
                             vuln.status === 'Open' ? 'bg-purple-600' :
                             vuln.status === 'In Progress' ? 'bg-blue-600' :
-                            vuln.status === 'Fixed' ? 'bg-green-600' : 'bg-teal-600'
+                            vuln.status === 'Closed' ? 'bg-gray-600' : 'bg-gray-600'
                           } text-white`}>
                             {vuln.status}
                           </span>

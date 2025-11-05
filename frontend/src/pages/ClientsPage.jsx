@@ -285,10 +285,6 @@ const ClientsPage = () => {
                     <label className="text-sm text-gray-400">Окончание</label>
                     <div className="mt-1 text-white">{selectedClient.contractExpiry}</div>
                   </div>
-                  <div>
-                    <label className="text-sm text-gray-400">Биллинг</label>
-                    <div className="mt-1 text-white">{selectedClient.billingCycle}</div>
-                  </div>
                 </div>
               </div>
 

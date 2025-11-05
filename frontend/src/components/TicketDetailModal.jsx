@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Ticket, MessageCircle } from 'lucide-react'
-import { priorityColors, statusColorsTickets } from '../config/colors'
+import { priorityColors, statusColorsTickets, statusColors } from '../config/colors'
 
 const TicketDetailModal = ({ 
   ticket, 
@@ -13,6 +13,8 @@ const TicketDetailModal = ({
   newMessage = '',
   setNewMessage = () => {}
 }) => {
+  const [showClosedVulns, setShowClosedVulns] = useState(false)
+  
   if (!ticket) return null
 
   const assignee = workers.find(w => w.id === ticket.assigneeId)
@@ -21,7 +23,10 @@ const TicketDetailModal = ({
 
   const getVulnerabilitiesForTicket = (ticket) => {
     if (!ticket || !ticket.vulnerabilities) return []
-    return ticket.vulnerabilities
+    return ticket.vulnerabilities.filter(v => {
+      if (!showClosedVulns && v.status === 'Closed') return false
+      return true
+    })
   }
 
   return (
@@ -97,9 +102,20 @@ const TicketDetailModal = ({
           </div>
 
           {/* Vulnerabilities */}
-          {getVulnerabilitiesForTicket(ticket).length > 0 && (
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Связанные уязвимости</label>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm text-gray-400 block">Связанные уязвимости ({getVulnerabilitiesForTicket(ticket).length})</label>
+              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showClosedVulns}
+                  onChange={(e) => setShowClosedVulns(e.target.checked)}
+                  className="w-4 h-4 accent-dark-purple-primary"
+                />
+                <span>Показывать закрытые</span>
+              </label>
+            </div>
+            {getVulnerabilitiesForTicket(ticket).length > 0 ? (
               <div className="space-y-2">
                 {getVulnerabilitiesForTicket(ticket).map((vuln) => (
                   <div 
@@ -112,19 +128,30 @@ const TicketDetailModal = ({
                         <div className="text-sm text-white font-medium">{vuln.displayId || vuln.id}</div>
                         <div className="text-xs text-gray-400">{vuln.title}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        vuln.criticality === 'Critical' ? 'bg-red-600' :
-                        vuln.criticality === 'High' ? 'bg-orange-600' :
-                        vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
-                      } text-white`}>
-                        {vuln.criticality}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          vuln.criticality === 'Critical' ? 'bg-red-600' :
+                          vuln.criticality === 'High' ? 'bg-orange-600' :
+                          vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
+                        } text-white`}>
+                          {vuln.criticality}
+                        </span>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          statusColors[vuln.status] || 'bg-gray-600'
+                        } text-white`}>
+                          {vuln.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-sm text-gray-500 text-center py-4">
+                {showClosedVulns ? 'Нет уязвимостей' : 'Нет открытых уязвимостей'}
+              </div>
+            )}
+          </div>
 
           {/* Description */}
           <div>

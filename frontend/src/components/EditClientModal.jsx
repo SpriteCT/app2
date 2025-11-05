@@ -75,18 +75,6 @@ const EditClientModal = ({
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
               />
             </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Биллинг</label>
-              <select 
-                value={editClient.billingCycle} 
-                onChange={(e) => setEditClient({ ...editClient, billingCycle: e.target.value })} 
-                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-              >
-                <option>Monthly</option>
-                <option>Quarterly</option>
-                <option>Yearly</option>
-              </select>
-            </div>
           </div>
 
           <div className="bg-dark-card border border-dark-border rounded-lg p-4">

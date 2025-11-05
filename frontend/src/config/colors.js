@@ -10,8 +10,6 @@ export const priorityColors = {
 export const statusColorsTickets = {
   Open: 'bg-purple-600',
   'In Progress': 'bg-blue-600',
-  Fixed: 'bg-green-600',
-  Verified: 'bg-teal-600',
   Closed: 'bg-gray-600',
 }
 
@@ -25,8 +23,7 @@ export const criticalityColors = {
 export const statusColors = {
   Open: 'bg-purple-600',
   'In Progress': 'bg-blue-600',
-  Fixed: 'bg-green-600',
-  Verified: 'bg-teal-600',
+  Closed: 'bg-gray-600',
 }
 
 export const projectTypeColors = {

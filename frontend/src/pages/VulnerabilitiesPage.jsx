@@ -13,6 +13,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCriticality, setSelectedCriticality] = useState('All')
   const [selectedStatus, setSelectedStatus] = useState('All')
+  const [ticketFilter, setTicketFilter] = useState('All') // 'All', 'WithTicket', 'WithoutTicket'
   const [selectedVulnerability, setSelectedVulnerability] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -86,6 +87,14 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
   }, [assetSearch, assets, createClientId, newVuln.clientId, showAddModal])
 
   const filteredVulnerabilities = useMemo(() => {
+    // Создаем Set ID уязвимостей, которые связаны с тикетами
+    const vulnIdsWithTickets = new Set()
+    tickets.forEach(t => {
+      if (t.vulnerabilities && Array.isArray(t.vulnerabilities)) {
+        t.vulnerabilities.forEach(v => vulnIdsWithTickets.add(v.id))
+      }
+    })
+
     return vulns.filter(v => {
       const assetName = assets.find(a => a.id === v.assetId)?.name || ''
       const matchesSearch = String(v.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,10 +103,16 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
       const matchesCriticality = selectedCriticality === 'All' || v.criticality === selectedCriticality
       const matchesStatus = selectedStatus === 'All' || v.status === selectedStatus
       const matchesClient = selectedClient === 'client-all' || String(v.clientId) === String(selectedClient)
+      
+      // Фильтр по связи с тикетом
+      const hasTicket = vulnIdsWithTickets.has(v.id)
+      const matchesTicketFilter = ticketFilter === 'All' || 
+                                  (ticketFilter === 'WithTicket' && hasTicket) ||
+                                  (ticketFilter === 'WithoutTicket' && !hasTicket)
 
-      return matchesSearch && matchesCriticality && matchesStatus && matchesClient
+      return matchesSearch && matchesCriticality && matchesStatus && matchesClient && matchesTicketFilter
     })
-  }, [searchTerm, selectedCriticality, selectedStatus, selectedClient, vulns, assets])
+  }, [searchTerm, selectedCriticality, selectedStatus, selectedClient, ticketFilter, vulns, assets, tickets])
 
   const criticalityCounts = useMemo(() => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
@@ -214,7 +229,17 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
               <option value="All">Все статусы</option>
                     <option value="Open">Open</option>
                     <option value="In Progress">In Progress</option>
-                    <option value="Fixed">Fixed</option>
+                    <option value="Closed">Closed</option>
+            </select>
+            
+            <select
+              value={ticketFilter}
+              onChange={(e) => setTicketFilter(e.target.value)}
+              className="px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+            >
+              <option value="All">Все уязвимости</option>
+              <option value="WithTicket">Связанные с тикетом</option>
+              <option value="WithoutTicket">Без тикета</option>
             </select>
           </div>
         </div>

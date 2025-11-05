@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { ticketsApi } from '../services/api'
 import { transformTicket, transformTicketToBackend } from '../utils/dataTransform'
 
@@ -16,6 +16,19 @@ const EditTicketModal = ({
       setEditTicket({ ...ticket })
     }
   }, [ticket])
+
+  // Filter assignees: workers OR clients from the same client as the ticket
+  const availableAssignees = useMemo(() => {
+    if (!editTicket || !editTicket.clientId) return workers
+    
+    return workers.filter(w => {
+      // Все исполнители
+      if (w.userType === 'worker') return true
+      // Только пользователи заказчика этого тикета
+      if (w.userType === 'client' && String(w.clientId) === String(editTicket.clientId)) return true
+      return false
+    })
+  }, [workers, editTicket?.clientId])
 
   const handleSave = async () => {
     if (!editTicket) return
@@ -74,7 +87,7 @@ const EditTicketModal = ({
               >
                 <option>Open</option>
                 <option>In Progress</option>
-                <option>Fixed</option>
+                <option>Closed</option>
               </select>
             </div>
           </div>
@@ -87,8 +100,10 @@ const EditTicketModal = ({
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— не назначен —</option>
-                {workers.map(w => (
-                  <option key={w.id} value={w.id}>{w.fullName}</option>
+                {availableAssignees.map(w => (
+                  <option key={w.id} value={w.id}>
+                    {w.fullName} {w.userType === 'worker' ? '' : '(Заказчик)'}
+                  </option>
                 ))}
               </select>
             </div>

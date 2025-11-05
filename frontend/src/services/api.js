@@ -134,3 +134,9 @@ export const ganttApi = {
   delete: (id) => apiRequest(`/gantt/tasks/${id}`, { method: 'DELETE' }),
 }
 
+// Auth API
+export const authApi = {
+  login: (email, password) => apiRequest('/auth/login', { method: 'POST', body: { email, password } }),
+  getCurrentUser: (token) => apiRequest(`/auth/me?token=${encodeURIComponent(token)}`),
+}
+

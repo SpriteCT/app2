@@ -37,6 +37,8 @@ const AssetsPage = ({ selectedClient }) => {
   const [scanners, setScanners] = useState([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState(null)
+  const [showClosedVulns, setShowClosedVulns] = useState(false)
+  const [showClosedTickets, setShowClosedTickets] = useState(false)
   
 
   // Load data from API
@@ -84,7 +86,11 @@ const AssetsPage = ({ selectedClient }) => {
 
   const getVulnerabilitiesForAsset = (asset) => {
     if (!asset || !asset.id) return []
-    return vulnerabilities.filter(v => v.assetId === asset.id)
+    return vulnerabilities.filter(v => {
+      if (v.assetId !== asset.id) return false
+      if (!showClosedVulns && v.status === 'Closed') return false
+      return true
+    })
   }
 
   const getTicketsForAsset = (asset) => {
@@ -92,7 +98,10 @@ const AssetsPage = ({ selectedClient }) => {
     // Find tickets that have vulnerabilities linked to this asset
     return tickets.filter(t => {
       if (!t.vulnerabilities || !Array.isArray(t.vulnerabilities)) return false
-      return t.vulnerabilities.some(v => v.assetId === asset.id)
+      const hasVulnForAsset = t.vulnerabilities.some(v => v.assetId === asset.id)
+      if (!hasVulnForAsset) return false
+      if (!showClosedTickets && t.status === 'Closed') return false
+      return true
     })
   }
 
@@ -231,9 +240,6 @@ const AssetsPage = ({ selectedClient }) => {
           <table className="w-full">
             <thead className="bg-dark-card border-b border-dark-border">
               <tr>
-                {selectedClient === 'client-all' && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Клиент</th>
-                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Имя</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Тип</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">IP</th>
@@ -247,24 +253,19 @@ const AssetsPage = ({ selectedClient }) => {
             <tbody className="divide-y divide-dark-border">
               {loading ? (
                 <tr>
-                  <td colSpan={selectedClient === 'client-all' ? 9 : 8} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                     Загрузка...
                   </td>
                 </tr>
               ) : filteredAssets.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedClient === 'client-all' ? 9 : 8} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                     Активы не найдены
                   </td>
                 </tr>
               ) : (
                 filteredAssets.map((asset) => (
                 <tr key={asset.id} className="hover:bg-dark-card/50 transition-colors">
-                  {selectedClient === 'client-all' && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {clients.find(c => String(c.id) === String(asset.clientId))?.name || '—'}
-                    </td>
-                  )}
                   <td className="px-6 py-4">
                     <div className="text-sm text-white">{asset.name}</div>
                     <div className="text-xs text-gray-400">{asset.operatingSystem}</div>
@@ -419,12 +420,23 @@ const AssetsPage = ({ selectedClient }) => {
               </div>
 
               {/* Vulnerabilities */}
-              {getVulnerabilitiesForAsset(selectedAsset).length > 0 && (
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block flex items-center gap-2">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-gray-400 block flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     Связанные уязвимости ({getVulnerabilitiesForAsset(selectedAsset).length})
                   </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showClosedVulns}
+                      onChange={(e) => setShowClosedVulns(e.target.checked)}
+                      className="w-4 h-4 accent-dark-purple-primary"
+                    />
+                    <span>Показывать закрытые</span>
+                  </label>
+                </div>
+                {getVulnerabilitiesForAsset(selectedAsset).length > 0 ? (
                   <div className="space-y-2">
                     {getVulnerabilitiesForAsset(selectedAsset).map((vuln) => (
                       <div 
@@ -437,27 +449,49 @@ const AssetsPage = ({ selectedClient }) => {
                             <div className="text-sm text-white font-medium">{vuln.displayId || vuln.id}</div>
                             <div className="text-xs text-gray-400">{vuln.title}</div>
                           </div>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            vuln.criticality === 'Critical' ? 'bg-red-600' :
-                            vuln.criticality === 'High' ? 'bg-orange-600' :
-                            vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
-                          } text-white`}>
-                            {vuln.criticality}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              vuln.criticality === 'Critical' ? 'bg-red-600' :
+                              vuln.criticality === 'High' ? 'bg-orange-600' :
+                              vuln.criticality === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
+                            } text-white`}>
+                              {vuln.criticality}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              statusColors[vuln.status] || 'bg-gray-600'
+                            } text-white`}>
+                              {vuln.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-4">
+                    {showClosedVulns ? 'Нет уязвимостей' : 'Нет открытых уязвимостей'}
+                  </div>
+                )}
+              </div>
 
               {/* Tickets */}
-              {getTicketsForAsset(selectedAsset).length > 0 && (
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block flex items-center gap-2">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-gray-400 block flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
                     Связанные тикеты ({getTicketsForAsset(selectedAsset).length})
                   </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showClosedTickets}
+                      onChange={(e) => setShowClosedTickets(e.target.checked)}
+                      className="w-4 h-4 accent-dark-purple-primary"
+                    />
+                    <span>Показывать закрытые</span>
+                  </label>
+                </div>
+                {getTicketsForAsset(selectedAsset).length > 0 ? (
                   <div className="space-y-2">
                     {getTicketsForAsset(selectedAsset).map((ticket) => (
                       <div 
@@ -470,19 +504,28 @@ const AssetsPage = ({ selectedClient }) => {
                             <div className="text-sm text-white font-medium">{ticket.displayId || ticket.id}</div>
                             <div className="text-xs text-gray-400">{ticket.title}</div>
                           </div>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            ticket.priority === 'Critical' ? 'bg-red-600' :
-                            ticket.priority === 'High' ? 'bg-orange-600' :
-                            ticket.priority === 'Medium' ? 'bg-yellow-600' : 'bg-blue-600'
-                          } text-white`}>
-                            {ticket.priority}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              priorityColors[ticket.priority] || 'bg-gray-600'
+                            } text-white`}>
+                              {ticket.priority}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              statusColorsTickets[ticket.status] || 'bg-gray-600'
+                            } text-white`}>
+                              {ticket.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-4">
+                    {showClosedTickets ? 'Нет тикетов' : 'Нет открытых тикетов'}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

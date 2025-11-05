@@ -46,12 +46,32 @@ def fix_sequences():
                 continue
 
 
+def set_default_passwords():
+    """
+    Set default password for all users that don't have one.
+    Default password: password123 (хранится в чистом виде без хеширования)
+    """
+    default_password = "password123"
+    
+    with engine.begin() as conn:
+        try:
+            # Update all users without password (храним в чистом виде)
+            conn.execute(
+                text("UPDATE user_accounts SET password_hash = :password WHERE password_hash IS NULL"),
+                {"password": default_password}
+            )
+            print("Default passwords set for users without passwords")
+        except Exception as e:
+            print(f"Warning: Could not set default passwords: {e}")
+
+
 def ensure_sequences_fixed():
     """
     Ensure sequences are fixed. Called on application startup.
     """
     try:
         fix_sequences()
+        set_default_passwords()
         print("Database sequences synchronized")
     except Exception as e:
         print(f"Warning: Could not synchronize sequences: {e}")

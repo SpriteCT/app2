@@ -5,30 +5,94 @@ import TicketsPage from './pages/TicketsPage'
 import AssetsPage from './pages/AssetsPage'
 import ClientsPage from './pages/ClientsPage'
 import ReportsPage from './pages/ReportsPage'
-import { clientsApi } from './services/api'
-import { transformClient } from './utils/dataTransform'
+import { clientsApi, authApi } from './services/api'
+import { transformClient, transformWorker } from './utils/dataTransform'
+import UserProfileMenu from './components/UserProfileMenu'
+import LoginModal from './components/LoginModal'
 
 function App() {
   const [activePage, setActivePage] = useState('vulnerabilities')
   const [selectedClient, setSelectedClient] = useState('client-all')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
   const [clients, setClients] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Проверяем сохраненный токен при загрузке
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        try {
+          const userData = await authApi.getCurrentUser(token)
+          const transformed = transformWorker(userData)
+          setCurrentUser(transformed)
+          setIsAuthenticated(true)
+        } catch (error) {
+          // Токен невалиден, очищаем
+          localStorage.removeItem('auth_token')
+        }
+      }
+      setIsLoading(false)
+    }
+    checkAuth()
+  }, [])
 
   useEffect(() => {
-    const loadClients = async () => {
-      try {
-        const clientsData = await clientsApi.getAll()
-        setClients(clientsData.map(transformClient))
-      } catch (error) {
-        console.error('Failed to load clients:', error)
+    if (isAuthenticated) {
+      const loadClients = async () => {
+        try {
+          const clientsData = await clientsApi.getAll()
+          setClients(clientsData.map(transformClient))
+        } catch (error) {
+          console.error('Failed to load clients:', error)
+        }
       }
+      loadClients()
     }
-    loadClients()
-  }, [])
+  }, [isAuthenticated])
+
+  const handleLogin = async (email, password) => {
+    try {
+      const response = await authApi.login(email, password)
+      const transformed = transformWorker(response.user)
+      
+      // Сохраняем токен
+      localStorage.setItem('auth_token', response.token)
+      
+      setCurrentUser(transformed)
+      setIsAuthenticated(true)
+    } catch (error) {
+      // Ошибка обрабатывается в LoginModal
+      throw error
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token')
+    setCurrentUser(null)
+    setIsAuthenticated(false)
+    setActivePage('vulnerabilities')
+    setSelectedClient('client-all')
+  }
 
   const currentClient = selectedClient === 'client-all' 
     ? { name: 'Все клиенты', shortName: 'Все', id: 'client-all' }
     : clients.find(c => c.id === selectedClient) || { name: 'Все клиенты', shortName: 'Все', id: 'client-all' }
+
+  // Показываем модальное окно авторизации, если не авторизован
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="text-white">Загрузка...</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <LoginModal onLogin={handleLogin} />
+  }
 
   return (
     <div className="min-h-screen bg-dark-bg">
@@ -97,7 +161,7 @@ function App() {
               </div>
             </div>
             
-            {/* Client Selector */}
+            {/* Client Selector and User Profile */}
             <div className="flex items-center gap-4">
               <div className="relative">
                 <button
@@ -162,6 +226,9 @@ function App() {
                   </>
                 )}
               </div>
+              
+              {/* User Profile Menu */}
+              <UserProfileMenu user={currentUser} onLogout={handleLogout} />
             </div>
           </div>
         </div>
@@ -170,7 +237,7 @@ function App() {
       {/* Page Content */}
       <div className="max-w-full mx-auto px-6 py-6">
         {activePage === 'vulnerabilities' && <VulnerabilitiesPage selectedClient={selectedClient} />}
-        {activePage === 'tickets' && <TicketsPage selectedClient={selectedClient} />}
+        {activePage === 'tickets' && <TicketsPage selectedClient={selectedClient} currentUser={currentUser} />}
         {activePage === 'assets' && <AssetsPage selectedClient={selectedClient} />}
         {activePage === 'clients' && <ClientsPage />}
         {activePage === 'reports' && <ReportsPage selectedClient={selectedClient} />}

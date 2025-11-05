@@ -8,7 +8,7 @@ import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
 import CreateTicketModal from '../components/CreateTicketModal'
 import EditTicketModal from '../components/EditTicketModal'
 
-const TicketsPage = ({ selectedClient }) => {
+const TicketsPage = ({ selectedClient, currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPriority, setSelectedPriority] = useState('All')
   const [selectedStatus, setSelectedStatus] = useState('All')
@@ -68,10 +68,8 @@ const TicketsPage = ({ selectedClient }) => {
   const filteredTickets = useMemo(() => {
     const filtered = tickets.filter(t => {
       if (!t) return false
-      const clientName = clients.find(c => String(c.id) === String(t.clientId))?.name || ''
       const matchesSearch = String(t.displayId || t.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          clientName.toLowerCase().includes(searchTerm.toLowerCase())
+                          t.title.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesPriority = selectedPriority === 'All' || t.priority === selectedPriority
       const matchesStatus = selectedStatus === 'All' || t.status === selectedStatus
       const matchesClient = selectedClient === 'client-all' || String(t.clientId) === String(selectedClient)
@@ -79,7 +77,7 @@ const TicketsPage = ({ selectedClient }) => {
       return matchesSearch && matchesPriority && matchesStatus && matchesClient
     })
     return filtered
-  }, [searchTerm, selectedPriority, selectedStatus, selectedClient, tickets, clients])
+  }, [searchTerm, selectedPriority, selectedStatus, selectedClient, tickets])
 
   const priorityCounts = useMemo(() => {
     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 }
@@ -95,7 +93,7 @@ const TicketsPage = ({ selectedClient }) => {
   }, [selectedClient, tickets])
 
   const statusCounts = useMemo(() => {
-    const counts = { Open: 0, 'In Progress': 0, Fixed: 0 }
+    const counts = { Open: 0, 'In Progress': 0, Closed: 0 }
     const filtered = selectedClient === 'client-all' 
       ? tickets 
       : tickets.filter(t => String(t.clientId) === String(selectedClient))
@@ -135,11 +133,16 @@ const TicketsPage = ({ selectedClient }) => {
   const handleSendMessage = async (ticketId) => {
     if (!newMessage.trim()) return
     
+    if (!currentUser || !currentUser.id) {
+      alert('Ошибка: не удалось определить текущего пользователя')
+      return
+    }
+    
     try {
-      // Отправляем сообщение через API
+      // Отправляем сообщение через API от имени текущего пользователя
       const messageData = {
         message: newMessage.trim(),
-        author_id: null // Можно добавить автора позже
+        author_id: currentUser.id
       }
       await ticketsApi.addMessage(ticketId, messageData)
       
@@ -289,7 +292,7 @@ const TicketsPage = ({ selectedClient }) => {
         </div>
 
         {/* Status Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
             <div className="text-sm text-gray-400 mb-1">Открыто</div>
             <div className="text-2xl font-bold text-purple-400">{statusCounts.Open}</div>
@@ -299,8 +302,8 @@ const TicketsPage = ({ selectedClient }) => {
             <div className="text-2xl font-bold text-blue-400">{statusCounts['In Progress']}</div>
           </div>
           <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
-            <div className="text-sm text-gray-400 mb-1">Исправлено</div>
-            <div className="text-2xl font-bold text-green-400">{statusCounts.Fixed}</div>
+            <div className="text-sm text-gray-400 mb-1">Закрыто</div>
+            <div className="text-2xl font-bold text-gray-400">{statusCounts.Closed}</div>
           </div>
         </div>
       </div>
@@ -313,7 +316,7 @@ const TicketsPage = ({ selectedClient }) => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Поиск по ID, названию или клиенту..."
+                placeholder="Поиск по ID или названию..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
@@ -343,7 +346,7 @@ const TicketsPage = ({ selectedClient }) => {
               <option value="All">Все статусы</option>
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
-              <option value="Fixed">Fixed</option>
+              <option value="Closed">Closed</option>
             </select>
           </div>
         </div>
@@ -507,6 +510,18 @@ const TicketsPage = ({ selectedClient }) => {
         onClose={() => setShowEditTicketModal(false)}
         onUpdate={(transformed) => {
           setTickets(prev => prev.map(t => t.id === transformed.id ? transformed : t))
+          // Если открыт модальный диалог с деталями этого тикета, обновляем его тоже
+          if (selectedTicket && selectedTicket.id === transformed.id) {
+            // Перезагружаем полные данные тикета, чтобы получить обновленные сообщения
+            ticketsApi.getById(transformed.id).then(fullTicket => {
+              const transformedFull = transformTicket(fullTicket)
+              setSelectedTicket(transformedFull)
+            }).catch(error => {
+              console.error('Failed to reload ticket:', error)
+              // В случае ошибки просто обновляем из transformed
+              setSelectedTicket(transformed)
+            })
+          }
         }}
         ticket={editTicket}
         workers={workers}

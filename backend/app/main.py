@@ -12,7 +12,8 @@ from app.routers import (
     tickets,
     workers,
     reference,
-    gantt
+    gantt,
+    auth
 )
 from app.init_db import ensure_sequences_fixed
 
@@ -57,6 +58,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(clients.router, prefix="/api/v1")
 app.include_router(projects.router, prefix="/api/v1")
 app.include_router(assets.router, prefix="/api/v1")

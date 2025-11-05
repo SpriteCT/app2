@@ -58,20 +58,20 @@ const ReportsPage = ({ selectedClient }) => {
     const totalVulns = filteredVulnerabilities.length
     const criticalVulns = filteredVulnerabilities.filter(v => v.criticality === 'Critical').length
     const openVulns = filteredVulnerabilities.filter(v => v.status === 'Open').length
-    const fixedVulns = filteredVulnerabilities.filter(v => v.status === 'Fixed').length
+    const closedVulns = filteredVulnerabilities.filter(v => v.status === 'Closed').length
     
-    const activeTickets = filteredTickets.filter(t => t.status !== 'Fixed' && t.status !== 'Closed').length
-    const fixedTickets = filteredTickets.filter(t => t.status === 'Fixed').length
+    const activeTickets = filteredTickets.filter(t => t.status !== 'Closed').length
+    const closedTickets = filteredTickets.filter(t => t.status === 'Closed').length
     const totalTickets = filteredTickets.length
-    const resolvedPercentage = totalTickets > 0 ? Math.round((fixedTickets / totalTickets) * 100) : 0
+    const resolvedPercentage = totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0
 
     return {
       totalVulns,
       criticalVulns,
       openVulns,
-      fixedVulns,
+      closedVulns,
       activeTickets,
-      fixedTickets,
+      closedTickets,
       totalTickets,
       resolvedPercentage,
     }
@@ -172,15 +172,15 @@ const ReportsPage = ({ selectedClient }) => {
         months[monthIndex].open++
       }
 
-      // Fixed vulnerabilities - use updatedAt when status changed to Fixed
-      if (v.status === 'Fixed' && v.updatedAt) {
-        const fixedDate = new Date(v.updatedAt)
-        const fixedMonthIndex = months.findIndex(m => 
-          m.date.getMonth() === fixedDate.getMonth() && 
-          m.date.getFullYear() === fixedDate.getFullYear()
+      // Closed vulnerabilities - use updatedAt when status changed to Closed
+      if (v.status === 'Closed' && v.updatedAt) {
+        const closedDate = new Date(v.updatedAt)
+        const closedMonthIndex = months.findIndex(m => 
+          m.date.getMonth() === closedDate.getMonth() && 
+          m.date.getFullYear() === closedDate.getFullYear()
         )
-        if (fixedMonthIndex >= 0) {
-          months[fixedMonthIndex].fixed++
+        if (closedMonthIndex >= 0) {
+          months[closedMonthIndex].fixed++
         }
       }
     })
@@ -252,12 +252,12 @@ const ReportsPage = ({ selectedClient }) => {
         }
       }
 
-      // Fixed tickets
-      if (t.status === 'Fixed' && t.updatedAt) {
-        const fixedDate = new Date(t.updatedAt)
+      // Closed tickets
+      if (t.status === 'Closed' && t.updatedAt) {
+        const closedDate = new Date(t.updatedAt)
         const monthIndex = months.findIndex(m => 
-          m.date.getMonth() === fixedDate.getMonth() && 
-          m.date.getFullYear() === fixedDate.getFullYear()
+          m.date.getMonth() === closedDate.getMonth() && 
+          m.date.getFullYear() === closedDate.getFullYear()
         )
         if (monthIndex >= 0) {
           months[monthIndex].fixed++
@@ -307,12 +307,12 @@ const ReportsPage = ({ selectedClient }) => {
 
   // Ticket resolution time statistics
   const ticketResolutionStats = useMemo(() => {
-    const fixedTickets = filteredTickets.filter(t => t.status === 'Fixed' && t.createdAt && t.updatedAt)
-    if (fixedTickets.length === 0) {
+    const closedTickets = filteredTickets.filter(t => t.status === 'Closed' && t.createdAt && t.updatedAt)
+    if (closedTickets.length === 0) {
       return { average: 0, median: 0, min: 0, max: 0, count: 0 }
     }
 
-    const resolutionTimes = fixedTickets.map(t => {
+    const resolutionTimes = closedTickets.map(t => {
       const created = new Date(t.createdAt)
       const updated = new Date(t.updatedAt)
       return Math.ceil((updated - created) / (1000 * 60 * 60 * 24)) // days
@@ -323,7 +323,7 @@ const ReportsPage = ({ selectedClient }) => {
     const min = resolutionTimes[0]
     const max = resolutionTimes[resolutionTimes.length - 1]
 
-    return { average, median, min, max, count: fixedTickets.length }
+    return { average, median, min, max, count: closedTickets.length }
   }, [filteredTickets])
 
   // Tickets by priority and status
@@ -340,8 +340,7 @@ const ReportsPage = ({ selectedClient }) => {
     return [
       { name: 'Open', value: filteredTickets.filter(t => t.status === 'Open').length, color: '#9333ea' },
       { name: 'In Progress', value: filteredTickets.filter(t => t.status === 'In Progress').length, color: '#2563eb' },
-      { name: 'Fixed', value: filteredTickets.filter(t => t.status === 'Fixed').length, color: '#16a34a' },
-      { name: 'Closed', value: filteredTickets.filter(t => t.status === 'Closed').length, color: '#0891b2' },
+      { name: 'Closed', value: filteredTickets.filter(t => t.status === 'Closed').length, color: '#16a34a' },
     ]
   }, [filteredTickets])
 

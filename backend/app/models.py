@@ -62,15 +62,12 @@ class AssetStatus(str, enum.Enum):
 class VulnStatus(str, enum.Enum):
     OPEN = "Open"
     IN_PROGRESS = "In Progress"
-    FIXED = "Fixed"
-    VERIFIED = "Verified"
+    CLOSED = "Closed"
 
 
 class TicketStatus(str, enum.Enum):
     OPEN = "Open"
     IN_PROGRESS = "In Progress"
-    FIXED = "Fixed"
-    VERIFIED = "Verified"
     CLOSED = "Closed"
 
 
@@ -121,7 +118,6 @@ class Client(Base):
     contract_number = Column(Text, nullable=True)
     contract_date = Column(Date, nullable=True)
     contract_expiry = Column(Date, nullable=True)
-    billing_cycle = Column(ENUM('Monthly', 'Quarterly', 'Yearly', name='billing_cycle_type', create_type=False), nullable=False, default='Monthly')
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -231,7 +227,7 @@ class Vulnerability(Base):
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     scanner_id = Column(Integer, ForeignKey("scanners.id", ondelete="SET NULL"), nullable=True)
-    status = Column(ENUM('Open', 'In Progress', 'Fixed', 'Verified', name='vuln_status', create_type=False), nullable=False)
+    status = Column(ENUM('Open', 'In Progress', 'Closed', name='vuln_status', create_type=False), nullable=False)
     criticality = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
     cvss = Column(Numeric, nullable=True)
     cve = Column(Text, nullable=True)
@@ -263,7 +259,7 @@ class Ticket(Base):
     assignee_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
     reporter_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
     priority = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
-    status = Column(ENUM('Open', 'In Progress', 'Fixed', 'Verified', 'Closed', name='ticket_status', create_type=False), nullable=False, default='Open')
+    status = Column(ENUM('Open', 'In Progress', 'Closed', name='ticket_status', create_type=False), nullable=False, default='Open')
     is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

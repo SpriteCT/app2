@@ -118,7 +118,6 @@ class ClientBase(BaseModel):
     contract_number: Optional[str] = None
     contract_date: Optional[date] = None
     contract_expiry: Optional[date] = None
-    billing_cycle: str = "Monthly"
     notes: Optional[str] = None
 
 
@@ -133,7 +132,6 @@ class ClientUpdate(BaseModel):
     contract_number: Optional[str] = None
     contract_date: Optional[date] = None
     contract_expiry: Optional[date] = None
-    billing_cycle: Optional[str] = None
     notes: Optional[str] = None
     contacts: Optional[List[ClientContactCreate]] = None
 

@@ -20,7 +20,6 @@ export const transformClient = (backendClient) => {
     contractNumber: backendClient.contract_number,
     contractDate: backendClient.contract_date,
     contractExpiry: backendClient.contract_expiry,
-    billingCycle: backendClient.billing_cycle,
     notes: backendClient.notes,
     contacts: contacts.map(contact => ({
       id: contact.id,
@@ -57,7 +56,6 @@ export const transformClientToBackend = (frontendClient) => {
     contract_number: frontendClient.contractNumber,
     contract_date: frontendClient.contractDate || null,
     contract_expiry: frontendClient.contractExpiry || null,
-    billing_cycle: frontendClient.billingCycle,
     notes: frontendClient.notes,
     contacts: contacts.map(contact => ({
       name: contact.name || '',

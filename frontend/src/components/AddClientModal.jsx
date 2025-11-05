@@ -17,7 +17,6 @@ const AddClientModal = ({
     contractNumber: '',
     contractDate: '',
     contractExpiry: '',
-    billingCycle: 'Monthly',
     notes: '',
   })
 
@@ -37,7 +36,6 @@ const AddClientModal = ({
         contractNumber: '',
         contractDate: '',
         contractExpiry: '',
-        billingCycle: 'Monthly',
         notes: '',
       })
     } catch (error) {
@@ -88,18 +86,6 @@ const AddClientModal = ({
                 onChange={(e) => setNewClient({ ...newClient, industry: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
               />
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Биллинг</label>
-              <select 
-                value={newClient.billingCycle} 
-                onChange={(e) => setNewClient({ ...newClient, billingCycle: e.target.value })} 
-                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-              >
-                <option>Monthly</option>
-                <option>Quarterly</option>
-                <option>Yearly</option>
-              </select>
             </div>
           </div>
 

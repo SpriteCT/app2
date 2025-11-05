@@ -359,7 +359,6 @@ POST /api/v1/clients/
   "email": "ivanov@example.ru",
   "sla": "Premium",
   "security_level": "Critical",
-  "billing_cycle": "Monthly",
   "additional_contacts": [
     {
       "name": "Петров П.П.",

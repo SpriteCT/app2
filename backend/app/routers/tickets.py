@@ -149,6 +149,8 @@ def update_ticket(
     db: Session = Depends(get_db)
 ):
     """Update a ticket"""
+    from app.models import UserAccount
+    
     db_ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not db_ticket:
         raise HTTPException(
@@ -166,12 +168,55 @@ def update_ticket(
                 detail="Due date cannot be earlier than creation date"
             )
     
-    status_changed = False
-    old_status = db_ticket.status
+    # Store old values for change tracking
+    old_values = {
+        'status': db_ticket.status,
+        'priority': db_ticket.priority,
+        'assignee_id': db_ticket.assignee_id,
+        'due_date': db_ticket.due_date,
+        'title': db_ticket.title,
+        'resolution': db_ticket.resolution
+    }
     
+    status_changed = False
+    changes = []
+    
+    # Apply updates and track changes
     for field, value in update_data.items():
-        if field == 'status' and value != old_status:
-            status_changed = True
+        old_value = old_values.get(field)
+        
+        # Check if value actually changed
+        if old_value != value:
+            if field == 'status':
+                status_changed = True
+                changes.append(('status', old_value, value))
+            elif field == 'priority':
+                changes.append(('priority', old_value, value))
+            elif field == 'assignee_id':
+                # Get assignee names
+                old_assignee = None
+                new_assignee = None
+                if old_value:
+                    old_assignee_obj = db.query(UserAccount).filter(UserAccount.id == old_value).first()
+                    old_assignee = old_assignee_obj.full_name if old_assignee_obj else None
+                if value:
+                    new_assignee_obj = db.query(UserAccount).filter(UserAccount.id == value).first()
+                    new_assignee = new_assignee_obj.full_name if new_assignee_obj else None
+                changes.append(('assignee_id', old_assignee or 'не назначен', new_assignee or 'не назначен'))
+            elif field == 'due_date':
+                old_due_str = old_value.strftime('%d.%m.%Y') if old_value else 'не установлен'
+                new_due_str = value.strftime('%d.%m.%Y') if value else 'не установлен'
+                changes.append(('due_date', old_due_str, new_due_str))
+            elif field == 'title':
+                changes.append(('title', old_value, value))
+            elif field == 'resolution':
+                if old_value and not value:
+                    changes.append(('resolution', 'удалено', None))
+                elif not old_value and value:
+                    changes.append(('resolution', None, 'добавлено'))
+                else:
+                    changes.append(('resolution', old_value, value))
+        
         setattr(db_ticket, field, value)
     
     # If status changed, update related vulnerabilities
@@ -219,6 +264,29 @@ def update_ticket(
         
         # Update ticket's updated_at when vulnerabilities are changed
         db_ticket.updated_at = datetime.now(timezone.utc)
+    
+    # Create chat messages for changes
+    if changes:
+        field_names = {
+            'status': 'Статус',
+            'priority': 'Приоритет',
+            'assignee_id': 'Ответственный',
+            'due_date': 'Срок выполнения',
+            'title': 'Название',
+            'resolution': 'Решение'
+        }
+        
+        for field, old_val, new_val in changes:
+            field_name = field_names.get(field, field)
+            message_text = f"{field_name} изменен: {old_val} → {new_val}"
+            
+            db_message = TicketMessage(
+                ticket_id=ticket_id,
+                author_id=None,  # System message
+                message=message_text,
+                timestamp=datetime.now(timezone.utc)
+            )
+            db.add(db_message)
     
     db.commit()
     db.refresh(db_ticket)
