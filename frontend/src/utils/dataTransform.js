@@ -4,30 +4,33 @@
 export const transformClient = (backendClient) => {
   if (!backendClient) return null
   
+  const contacts = (backendClient.contacts || [])
+  const primaryContact = contacts.find(c => c.is_primary) || contacts[0] || null
+  
   return {
     id: backendClient.id,
     name: backendClient.name,
     shortName: backendClient.short_name,
     code: backendClient.short_name, // Alias for compatibility
     industry: backendClient.industry,
-    contactPerson: backendClient.contact_person,
-    position: backendClient.position,
-    phone: backendClient.phone,
-    email: backendClient.email,
-    sla: backendClient.sla,
-    securityLevel: backendClient.security_level,
+    contactPerson: primaryContact?.name || '',
+    position: primaryContact?.role || '',
+    phone: primaryContact?.phone || '',
+    email: primaryContact?.email || '',
     contractNumber: backendClient.contract_number,
     contractDate: backendClient.contract_date,
     contractExpiry: backendClient.contract_expiry,
     billingCycle: backendClient.billing_cycle,
-    infraCloud: backendClient.infra_cloud !== undefined ? backendClient.infra_cloud : true,
-    infraOnPrem: backendClient.infra_on_prem !== undefined ? backendClient.infra_on_prem : true,
-    infrastructure: {
-      cloudServices: backendClient.infra_cloud !== undefined ? backendClient.infra_cloud : true,
-      onPremise: backendClient.infra_on_prem !== undefined ? backendClient.infra_on_prem : true,
-    },
     notes: backendClient.notes,
-    additionalContacts: (backendClient.additional_contacts || []).map(contact => ({
+    contacts: contacts.map(contact => ({
+      id: contact.id,
+      name: contact.name,
+      role: contact.role,
+      phone: contact.phone,
+      email: contact.email,
+      isPrimary: contact.is_primary || false,
+    })),
+    additionalContacts: contacts.map(contact => ({
       id: contact.id,
       name: contact.name,
       role: contact.role,
@@ -45,28 +48,23 @@ export const transformClientToBackend = (frontendClient) => {
     shortName = shortName.substring(0, 4)
   }
   
+  const contacts = frontendClient.contacts || frontendClient.additionalContacts || []
+  
   return {
     name: frontendClient.name,
     short_name: shortName,
     industry: frontendClient.industry,
-    contact_person: frontendClient.contactPerson,
-    position: frontendClient.position,
-    phone: frontendClient.phone,
-    email: frontendClient.email,
-    sla: frontendClient.sla,
-    security_level: frontendClient.securityLevel,
     contract_number: frontendClient.contractNumber,
     contract_date: frontendClient.contractDate || null,
     contract_expiry: frontendClient.contractExpiry || null,
     billing_cycle: frontendClient.billingCycle,
-    infra_cloud: frontendClient.infraCloud !== undefined ? frontendClient.infraCloud : true,
-    infra_on_prem: frontendClient.infraOnPrem !== undefined ? frontendClient.infraOnPrem : true,
     notes: frontendClient.notes,
-    additional_contacts: (frontendClient.additionalContacts || []).map(contact => ({
-      name: contact.name,
-      role: contact.role,
-      phone: contact.phone,
-      email: contact.email,
+    contacts: contacts.map(contact => ({
+      name: contact.name || '',
+      role: contact.role || '',
+      phone: contact.phone || '',
+      email: contact.email || '',
+      is_primary: contact.isPrimary || contact.is_primary || false,
     })),
   }
 }
@@ -86,9 +84,8 @@ export const transformProject = (backendProject) => {
     priority: backendProject.priority,
     startDate: backendProject.start_date,
     endDate: backendProject.end_date,
-    budget: backendProject.budget ? parseFloat(backendProject.budget) : null,
-    team: (backendProject.team_members || []).map(member => member.worker?.full_name || ''),
-    teamMemberIds: (backendProject.team_members || []).map(member => member.worker_id),
+    team: (backendProject.team_members || []).map(member => member.user_account?.full_name || ''),
+    teamMemberIds: (backendProject.team_members || []).map(member => member.user_account_id),
   }
 }
 
@@ -118,7 +115,6 @@ export const transformProjectToBackend = (frontendProject) => {
     priority: frontendProject.priority,
     start_date: startDate,
     end_date: endDate,
-    budget: frontendProject.budget ? String(frontendProject.budget) : null,
     team_member_ids: frontendProject.teamMemberIds || [],
   }
 }
@@ -291,24 +287,32 @@ export const transformTicketToBackend = (frontendTicket) => {
   }
 }
 
-// Transform worker from backend to frontend format
-export const transformWorker = (backendWorker) => {
-  if (!backendWorker) return null
+// Transform user account from backend to frontend format
+export const transformWorker = (backendUser) => {
+  if (!backendUser) return null
   
   return {
-    id: backendWorker.id,
-    fullName: backendWorker.full_name,
-    email: backendWorker.email,
-    phone: backendWorker.phone,
+    id: backendUser.id,
+    username: backendUser.username,
+    passwordHash: backendUser.password_hash,
+    fullName: backendUser.full_name,
+    email: backendUser.email,
+    phone: backendUser.phone,
+    userType: backendUser.user_type,
+    clientId: backendUser.client_id,
   }
 }
 
-// Transform worker from frontend to backend format
-export const transformWorkerToBackend = (frontendWorker) => {
+// Transform user account from frontend to backend format
+export const transformWorkerToBackend = (frontendUser) => {
   return {
-    full_name: frontendWorker.fullName,
-    email: frontendWorker.email,
-    phone: frontendWorker.phone,
+    username: frontendUser.username,
+    password_hash: frontendUser.passwordHash,
+    full_name: frontendUser.fullName,
+    email: frontendUser.email,
+    phone: frontendUser.phone,
+    user_type: frontendUser.userType || 'worker',
+    client_id: frontendUser.clientId || null,
   }
 }
 

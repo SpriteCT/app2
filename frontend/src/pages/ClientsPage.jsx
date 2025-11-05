@@ -132,12 +132,6 @@ const ClientsPage = () => {
                   <h3 className="text-xl font-bold text-white mb-1">{client.name}</h3>
                   <p className="text-sm text-gray-400">{client.shortName}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  client.sla === 'Premium' ? 'bg-emerald-600' :
-                  client.sla === 'Standard' ? 'bg-blue-600' : 'bg-gray-600'
-                } text-white`}>
-                  {client.sla}
-                </span>
               </div>
 
               {/* Contact Info */}
@@ -243,63 +237,45 @@ const ClientsPage = () => {
                     <label className="text-sm text-gray-400">Email</label>
                     <div className="mt-1 text-white">{selectedClient.email}</div>
                   </div>
-                  <div>
-                    <label className="text-sm text-gray-400">Уровень безопасности</label>
-                    <div className="mt-1">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        selectedClient.securityLevel === 'Critical' ? 'bg-red-600' : 'bg-blue-600'
-                      } text-white`}>
-                        {selectedClient.securityLevel}
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Additional Contacts */}
-                {selectedClient.additionalContacts && selectedClient.additionalContacts.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-dark-border">
-                    <label className="text-sm text-gray-400 mb-2 block">Дополнительные контакты</label>
-                    <div className="space-y-3">
-                      {selectedClient.additionalContacts.map((contact, idx) => (
-                        <div key={idx} className="bg-dark-card rounded p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="text-sm text-white">{contact.name}</div>
-                              <div className="text-xs text-gray-400">{contact.role}</div>
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              <div>{contact.phone}</div>
-                              <div>{contact.email}</div>
+                {(() => {
+                  const additionalContacts = (selectedClient.contacts || selectedClient.additionalContacts || []).filter(c => !c.isPrimary && !c.is_primary)
+                  return additionalContacts.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-dark-border">
+                      <label className="text-sm text-gray-400 mb-2 block">Дополнительные контакты</label>
+                      <div className="space-y-3">
+                        {additionalContacts.map((contact, idx) => (
+                          <div key={contact.id || idx} className="bg-dark-card rounded p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm text-white">{contact.name}</div>
+                                <div className="text-xs text-gray-400">{contact.role}</div>
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                <div>{contact.phone}</div>
+                                <div>{contact.email}</div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
 
               {/* Contract Information */}
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
-                  Договор и SLA
+                  Договор
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-400">Номер договора</label>
                     <div className="mt-1 text-white">{selectedClient.contractNumber}</div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-400">SLA</label>
-                    <div className="mt-1">
-                      <span className={`px-3 py-1 rounded-full text-xs ${
-                        selectedClient.sla === 'Premium' ? 'bg-emerald-600' :
-                        selectedClient.sla === 'Standard' ? 'bg-blue-600' : 'bg-gray-600'
-                      } text-white`}>
-                        {selectedClient.sla}
-                      </span>
-                    </div>
                   </div>
                   <div>
                     <label className="text-sm text-gray-400">Дата подписания</label>
@@ -312,21 +288,6 @@ const ClientsPage = () => {
                   <div>
                     <label className="text-sm text-gray-400">Биллинг</label>
                     <div className="mt-1 text-white">{selectedClient.billingCycle}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Infrastructure (counts derived elsewhere; show deployment types only) */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Server className="w-5 h-5" />
-                  Инфраструктура
-                </h3>
-                <div className="bg-dark-card rounded p-4">
-                    <div className="text-sm text-gray-400 mb-1">Тип развертывания</div>
-                    <div className="text-xs text-white mt-2">
-                      {selectedClient.infrastructure.cloudServices && '☁️ Cloud '}
-                      {selectedClient.infrastructure.onPremise && '🏢 On-Premise'}
                   </div>
                 </div>
               </div>
@@ -527,10 +488,6 @@ const ClientsPage = () => {
                 <div>
                   <label className="text-sm text-gray-400">Сроки</label>
                   <div className="mt-1 text-white">{selectedProject.startDate} — {selectedProject.endDate}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Бюджет</label>
-                  <div className="mt-1 text-white">{selectedProject.budget.toLocaleString('ru-RU')} ₽</div>
                 </div>
               </div>
 

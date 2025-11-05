@@ -7,14 +7,14 @@ from sqlalchemy import select
 from typing import List
 
 from app.database import get_db
-from app.models import Client, ClientAdditionalContact
+from app.models import Client, ClientContact
 from app.schemas import (
     Client as ClientSchema,
     ClientCreate,
     ClientUpdate,
-    ClientAdditionalContact as ContactSchema,
-    ClientAdditionalContactCreate,
-    ClientAdditionalContactUpdate
+    ClientContact as ContactSchema,
+    ClientContactCreate,
+    ClientContactUpdate
 )
 
 router = APIRouter(prefix="/clients", tags=["clients"])
@@ -28,14 +28,15 @@ def get_clients(
 ):
     """Get all clients"""
     from sqlalchemy.orm import joinedload
-    clients = db.query(Client).options(joinedload(Client.additional_contacts)).offset(skip).limit(limit).all()
+    clients = db.query(Client).options(joinedload(Client.contacts)).offset(skip).limit(limit).all()
     return clients
 
 
 @router.get("/{client_id}", response_model=ClientSchema)
 def get_client(client_id: int, db: Session = Depends(get_db)):
     """Get a specific client by ID"""
-    client = db.query(Client).filter(Client.id == client_id).first()
+    from sqlalchemy.orm import joinedload
+    client = db.query(Client).options(joinedload(Client.contacts)).filter(Client.id == client_id).first()
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -47,14 +48,14 @@ def get_client(client_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=ClientSchema, status_code=status.HTTP_201_CREATED)
 def create_client(client: ClientCreate, db: Session = Depends(get_db)):
     """Create a new client"""
-    db_client = Client(**client.model_dump(exclude={"additional_contacts"}))
+    db_client = Client(**client.model_dump(exclude={"contacts"}))
     db.add(db_client)
     db.flush()  # Get the ID
     
-    # Add additional contacts
-    if client.additional_contacts:
-        for contact in client.additional_contacts:
-            db_contact = ClientAdditionalContact(
+    # Add contacts
+    if client.contacts:
+        for contact in client.contacts:
+            db_contact = ClientContact(
                 client_id=db_client.id,
                 **contact.model_dump()
             )
@@ -79,9 +80,25 @@ def update_client(
             detail="Client not found"
         )
     
-    update_data = client_update.model_dump(exclude_unset=True)
+    update_data = client_update.model_dump(exclude_unset=True, exclude={"contacts"})
     for field, value in update_data.items():
         setattr(db_client, field, value)
+    
+    # Update contacts if provided
+    if "contacts" in client_update.model_dump(exclude_unset=True):
+        # Remove existing contacts
+        db.query(ClientContact).filter(
+            ClientContact.client_id == client_id
+        ).delete()
+        
+        # Add new contacts
+        if client_update.contacts:
+            for contact in client_update.contacts:
+                db_contact = ClientContact(
+                    client_id=client_id,
+                    **contact.model_dump()
+                )
+                db.add(db_contact)
     
     db.commit()
     db.refresh(db_client)
@@ -103,14 +120,14 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     return None
 
 
-# Additional Contacts routes
+# Contacts routes
 @router.post("/{client_id}/contacts", response_model=ContactSchema, status_code=status.HTTP_201_CREATED)
 def create_client_contact(
     client_id: int,
-    contact: ClientAdditionalContactCreate,
+    contact: ClientContactCreate,
     db: Session = Depends(get_db)
 ):
-    """Add an additional contact to a client"""
+    """Add a contact to a client"""
     # Verify client exists
     client = db.query(Client).filter(Client.id == client_id).first()
     if not client:
@@ -119,7 +136,7 @@ def create_client_contact(
             detail="Client not found"
         )
     
-    db_contact = ClientAdditionalContact(client_id=client_id, **contact.model_dump())
+    db_contact = ClientContact(client_id=client_id, **contact.model_dump())
     db.add(db_contact)
     db.commit()
     db.refresh(db_contact)
@@ -130,13 +147,13 @@ def create_client_contact(
 def update_client_contact(
     client_id: int,
     contact_id: int,
-    contact_update: ClientAdditionalContactUpdate,
+    contact_update: ClientContactUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update an additional contact"""
-    db_contact = db.query(ClientAdditionalContact).filter(
-        ClientAdditionalContact.id == contact_id,
-        ClientAdditionalContact.client_id == client_id
+    """Update a contact"""
+    db_contact = db.query(ClientContact).filter(
+        ClientContact.id == contact_id,
+        ClientContact.client_id == client_id
     ).first()
     if not db_contact:
         raise HTTPException(
@@ -159,10 +176,10 @@ def delete_client_contact(
     contact_id: int,
     db: Session = Depends(get_db)
 ):
-    """Delete an additional contact"""
-    db_contact = db.query(ClientAdditionalContact).filter(
-        ClientAdditionalContact.id == contact_id,
-        ClientAdditionalContact.client_id == client_id
+    """Delete a contact"""
+    db_contact = db.query(ClientContact).filter(
+        ClientContact.id == contact_id,
+        ClientContact.client_id == client_id
     ).first()
     if not db_contact:
         raise HTTPException(

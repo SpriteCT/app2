@@ -12,6 +12,7 @@ from app.schemas import (
     ProjectCreate,
     ProjectUpdate
 )
+from sqlalchemy.orm import joinedload
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -24,7 +25,7 @@ def get_projects(
     db: Session = Depends(get_db)
 ):
     """Get all projects, optionally filtered by client"""
-    query = db.query(Project)
+    query = db.query(Project).options(joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account))
     if client_id:
         query = query.filter(Project.client_id == client_id)
     projects = query.offset(skip).limit(limit).all()
@@ -34,7 +35,9 @@ def get_projects(
 @router.get("/{project_id}", response_model=ProjectSchema)
 def get_project(project_id: int, db: Session = Depends(get_db)):
     """Get a specific project by ID"""
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).options(
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account)
+    ).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -61,15 +64,19 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
     
     # Add team members
     if project.team_member_ids:
-        for worker_id in project.team_member_ids:
+        for user_account_id in project.team_member_ids:
             db_team_member = ProjectTeamMember(
                 project_id=db_project.id,
-                worker_id=worker_id
+                user_account_id=user_account_id
             )
             db.add(db_team_member)
     
     db.commit()
     db.refresh(db_project)
+    # Загружаем связанные данные для возврата
+    db_project = db.query(Project).options(
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account)
+    ).filter(Project.id == db_project.id).first()
     return db_project
 
 
@@ -97,18 +104,23 @@ def update_project(
         db.query(ProjectTeamMember).filter(
             ProjectTeamMember.project_id == project_id
         ).delete()
+        db.flush()  # Убеждаемся, что удаление выполнено перед добавлением новых
         
         # Add new team members
         if project_update.team_member_ids:
-            for worker_id in project_update.team_member_ids:
+            for user_account_id in project_update.team_member_ids:
                 db_team_member = ProjectTeamMember(
                     project_id=project_id,
-                    worker_id=worker_id
+                    user_account_id=user_account_id
                 )
                 db.add(db_team_member)
     
     db.commit()
     db.refresh(db_project)
+    # Загружаем связанные данные для возврата
+    db_project = db.query(Project).options(
+        joinedload(Project.team_members).joinedload(ProjectTeamMember.user_account)
+    ).filter(Project.id == db_project.id).first()
     return db_project
 
 

@@ -75,15 +75,22 @@ class TicketStatus(str, enum.Enum):
 
 
 # Models
-class Worker(Base):
-    __tablename__ = "workers"
+class UserAccount(Base):
+    __tablename__ = "user_accounts"
     
     id = Column(Integer, primary_key=True)
+    username = Column(Text, nullable=False, unique=True)
+    password_hash = Column(Text, nullable=True)  # Для будущей авторизации
     full_name = Column(Text, nullable=False)
     email = Column(Text, nullable=True)
     phone = Column(Text, nullable=True)
+    user_type = Column(ENUM('client', 'worker', name='user_type', create_type=False), nullable=False, default='worker')
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    client = relationship("Client", back_populates="user_accounts")
 
 
 class AssetType(Base):
@@ -111,26 +118,19 @@ class Client(Base):
     name = Column(Text, nullable=False)
     short_name = Column(Text, nullable=False)
     industry = Column(Text, nullable=True)
-    contact_person = Column(Text, nullable=True)
-    position = Column(Text, nullable=True)
-    phone = Column(Text, nullable=True)
-    email = Column(Text, nullable=True)
-    sla = Column(ENUM('Premium', 'Standard', 'Basic', name='sla_type', create_type=False), nullable=False, default='Standard')
-    security_level = Column(ENUM('Critical', 'High', name='security_level_type', create_type=False), nullable=False, default='High')
     contract_number = Column(Text, nullable=True)
     contract_date = Column(Date, nullable=True)
     contract_expiry = Column(Date, nullable=True)
     billing_cycle = Column(ENUM('Monthly', 'Quarterly', 'Yearly', name='billing_cycle_type', create_type=False), nullable=False, default='Monthly')
-    infra_cloud = Column(Boolean, nullable=False, default=True)
-    infra_on_prem = Column(Boolean, nullable=False, default=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
-    additional_contacts = relationship("ClientAdditionalContact", back_populates="client", cascade="all, delete-orphan")
+    contacts = relationship("ClientContact", back_populates="client", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="client", cascade="all, delete-orphan")
     assets = relationship("Asset", back_populates="client")
+    user_accounts = relationship("UserAccount", back_populates="client", cascade="all, delete-orphan")
     vulnerabilities = relationship("Vulnerability", back_populates="client")
     tickets = relationship("Ticket", back_populates="client")
     
@@ -139,8 +139,8 @@ class Client(Base):
     )
 
 
-class ClientAdditionalContact(Base):
-    __tablename__ = "client_additional_contacts"
+class ClientContact(Base):
+    __tablename__ = "client_contacts"
     
     id = Column(Integer, primary_key=True)
     client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
@@ -148,11 +148,12 @@ class ClientAdditionalContact(Base):
     role = Column(Text, nullable=True)
     phone = Column(Text, nullable=True)
     email = Column(Text, nullable=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
-    client = relationship("Client", back_populates="additional_contacts")
+    client = relationship("Client", back_populates="contacts")
 
 
 class Project(Base):
@@ -167,7 +168,6 @@ class Project(Base):
     priority = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False, default='High')
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    budget = Column(Numeric, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -186,16 +186,16 @@ class ProjectTeamMember(Base):
     
     id = Column(Integer, primary_key=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    worker_id = Column(Integer, ForeignKey("workers.id", ondelete="RESTRICT"), nullable=False)
+    user_account_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="RESTRICT"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
     project = relationship("Project", back_populates="team_members")
-    worker = relationship("Worker")
+    user_account = relationship("UserAccount")
     
     __table_args__ = (
-        UniqueConstraint("project_id", "worker_id", name="uq_project_team_member"),
+        UniqueConstraint("project_id", "user_account_id", name="uq_project_team_member"),
     )
 
 
@@ -260,8 +260,8 @@ class Ticket(Base):
     client_id = Column(Integer, ForeignKey("clients.id", ondelete="RESTRICT"), nullable=False)
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
-    assignee_id = Column(Integer, ForeignKey("workers.id", ondelete="SET NULL"), nullable=True)
-    reporter_id = Column(Integer, ForeignKey("workers.id", ondelete="SET NULL"), nullable=True)
+    assignee_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
+    reporter_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
     priority = Column(ENUM('Critical', 'High', 'Medium', 'Low', name='priority_type', create_type=False), nullable=False)
     status = Column(ENUM('Open', 'In Progress', 'Fixed', 'Verified', 'Closed', name='ticket_status', create_type=False), nullable=False, default='Open')
     is_deleted = Column(Boolean, nullable=False, server_default='false')
@@ -272,8 +272,8 @@ class Ticket(Base):
     
     # Relationships
     client = relationship("Client", back_populates="tickets")
-    assignee = relationship("Worker", foreign_keys=[assignee_id])
-    reporter = relationship("Worker", foreign_keys=[reporter_id])
+    assignee = relationship("UserAccount", foreign_keys=[assignee_id])
+    reporter = relationship("UserAccount", foreign_keys=[reporter_id])
     messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan")
     ticket_vulnerabilities = relationship("TicketVulnerability", back_populates="ticket", cascade="all, delete-orphan")
     
@@ -288,7 +288,7 @@ class TicketMessage(Base):
     
     id = Column(Integer, primary_key=True)
     ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
-    author_id = Column(Integer, ForeignKey("workers.id", ondelete="SET NULL"), nullable=True)
+    author_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -296,7 +296,7 @@ class TicketMessage(Base):
     
     # Relationships
     ticket = relationship("Ticket", back_populates="messages")
-    author = relationship("Worker")
+    author = relationship("UserAccount")
 
 
 class TicketVulnerability(Base):

@@ -16,24 +16,32 @@ class TimestampMixin(BaseModel):
     updated_at: datetime
 
 
-# Worker schemas
-class WorkerBase(BaseModel):
+# User Account schemas
+class UserAccountBase(BaseModel):
+    username: str
+    password_hash: Optional[str] = None  # Для будущей авторизации
     full_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    user_type: str = "worker"  # 'client' или 'worker'
+    client_id: Optional[int] = None  # Для заказчиков
 
 
-class WorkerCreate(WorkerBase):
+class UserAccountCreate(UserAccountBase):
     pass
 
 
-class WorkerUpdate(WorkerBase):
+class UserAccountUpdate(BaseModel):
+    username: Optional[str] = None
+    password_hash: Optional[str] = None
     full_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    user_type: Optional[str] = None
+    client_id: Optional[int] = None
 
 
-class Worker(WorkerBase, TimestampMixin):
+class UserAccount(UserAccountBase, TimestampMixin):
     id: int
     
     model_config = ConfigDict(from_attributes=True)
@@ -77,23 +85,25 @@ class Scanner(ScannerBase, TimestampMixin):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Client Additional Contact schemas
-class ClientAdditionalContactBase(BaseModel):
+# Client Contact schemas
+class ClientContactBase(BaseModel):
     name: str
     role: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    is_primary: bool = False
 
 
-class ClientAdditionalContactCreate(ClientAdditionalContactBase):
+class ClientContactCreate(ClientContactBase):
     pass
 
 
-class ClientAdditionalContactUpdate(ClientAdditionalContactBase):
+class ClientContactUpdate(ClientContactBase):
     name: Optional[str] = None
+    is_primary: Optional[bool] = None
 
 
-class ClientAdditionalContact(ClientAdditionalContactBase, TimestampMixin):
+class ClientContact(ClientContactBase, TimestampMixin):
     id: int
     client_id: int
     
@@ -105,54 +115,39 @@ class ClientBase(BaseModel):
     name: str
     short_name: str = Field(..., pattern="^[A-Z]{3,4}$")
     industry: Optional[str] = None
-    contact_person: Optional[str] = None
-    position: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    sla: str = "Standard"
-    security_level: str = "High"
     contract_number: Optional[str] = None
     contract_date: Optional[date] = None
     contract_expiry: Optional[date] = None
     billing_cycle: str = "Monthly"
-    infra_cloud: bool = True
-    infra_on_prem: bool = True
     notes: Optional[str] = None
 
 
 class ClientCreate(ClientBase):
-    additional_contacts: Optional[List[ClientAdditionalContactCreate]] = []
+    contacts: Optional[List[ClientContactCreate]] = []
 
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
     short_name: Optional[str] = Field(None, pattern="^[A-Z]{3,4}$")
     industry: Optional[str] = None
-    contact_person: Optional[str] = None
-    position: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    sla: Optional[str] = None
-    security_level: Optional[str] = None
     contract_number: Optional[str] = None
     contract_date: Optional[date] = None
     contract_expiry: Optional[date] = None
     billing_cycle: Optional[str] = None
-    infra_cloud: Optional[bool] = None
-    infra_on_prem: Optional[bool] = None
     notes: Optional[str] = None
+    contacts: Optional[List[ClientContactCreate]] = None
 
 
 class Client(ClientBase, TimestampMixin):
     id: int
-    additional_contacts: List[ClientAdditionalContact] = []
+    contacts: List[ClientContact] = []
     
     model_config = ConfigDict(from_attributes=True)
 
 
 # Project Team Member schemas
 class ProjectTeamMemberBase(BaseModel):
-    worker_id: int
+    user_account_id: int  # Ссылка на user_accounts.id
 
 
 class ProjectTeamMemberCreate(ProjectTeamMemberBase):
@@ -162,7 +157,7 @@ class ProjectTeamMemberCreate(ProjectTeamMemberBase):
 class ProjectTeamMember(ProjectTeamMemberBase, TimestampMixin):
     id: int
     project_id: int
-    worker: Optional[Worker] = None
+    user_account: Optional[UserAccount] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -176,7 +171,6 @@ class ProjectBase(BaseModel):
     priority: str = "High"
     start_date: date
     end_date: date
-    budget: Optional[float] = None
 
 
 class ProjectCreate(ProjectBase):
@@ -192,7 +186,6 @@ class ProjectUpdate(BaseModel):
     priority: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
-    budget: Optional[float] = None
     team_member_ids: Optional[List[int]] = None
 
 
@@ -297,7 +290,7 @@ class TicketMessage(TicketMessageBase, TimestampMixin):
     ticket_id: int
     author_id: Optional[int] = None
     timestamp: datetime
-    author: Optional[Worker] = None
+    author: Optional[UserAccount] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -339,8 +332,8 @@ class Ticket(TicketBase, TimestampMixin):
     assignee_id: Optional[int] = None
     reporter_id: Optional[int] = None
     vulnerabilities: List[Vulnerability] = []
-    assignee: Optional[Worker] = None
-    reporter: Optional[Worker] = None
+    assignee: Optional[UserAccount] = None
+    reporter: Optional[UserAccount] = None
     client: Optional[Client] = None
     messages: List[TicketMessage] = []
     

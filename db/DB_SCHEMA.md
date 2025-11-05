@@ -6,13 +6,18 @@ Field types are illustrative. Use UUIDs (string) or database-native IDs as prefe
 
 ## Core Tables
 
-workers
+user_accounts
 - id (pk)
+- username (text, unique) - для авторизации
+- password_hash (text) - для будущей авторизации
 - full_name (text)
 - email (text)
 - phone (text)
+- user_type (enum: 'client'|'worker') - тип пользователя
+- client_id (fk -> clients.id on delete cascade, nullable) - для заказчиков
 - created_at (timestamptz)
 - updated_at (timestamptz)
+- CONSTRAINT: если user_type = 'client', то client_id обязателен; если 'worker', то client_id должен быть NULL
 
 asset_types
 - id (pk)
@@ -31,29 +36,22 @@ clients
 - name (text)
 - short_name (text, 3–4 uppercase letters, e.g., NSV)  // CHECK ^[A-Z]{3,4}$
 - industry (text)
-- contact_person (text)
-- position (text)
-- phone (text)
-- email (text)
-- sla (enum: Premium|Standard|Basic)
-- security_level (enum: Critical|High)
 - contract_number (text)
 - contract_date (date)
 - contract_expiry (date)
 - billing_cycle (enum: Monthly|Quarterly|Yearly)
-- infra_cloud (boolean)            // cloudServices
-- infra_on_prem (boolean)         // onPremise
 - notes (text)
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
-client_additional_contacts
+client_contacts
 - id (pk)
 - client_id (fk -> clients.id on delete cascade)
 - name (text)
 - role (text)
 - phone (text)
 - email (text)
+- is_primary (boolean)            // основной контакт
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
@@ -67,7 +65,6 @@ projects
 - priority (enum: Critical|High|Medium|Low)
 - start_date (date)
 - end_date (date)
-- budget (numeric)
 - created_at (timestamptz)
 - updated_at (timestamptz)
 
@@ -76,10 +73,10 @@ projects
 project_team_members
 - id (pk)
 - project_id (fk -> projects.id on delete cascade)
-- worker_id (fk -> workers.id on delete restrict)
+- user_account_id (fk -> user_accounts.id on delete restrict)
 - created_at (timestamptz)
 - updated_at (timestamptz)
-- UNIQUE(project_id, worker_id)
+- UNIQUE(project_id, user_account_id)
 
 assets
 - id (pk)

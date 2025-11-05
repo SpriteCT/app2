@@ -103,15 +103,6 @@ const EditProjectModal = ({
             </div>
           </div>
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">Бюджет проекта</label>
-            <input 
-              type="number" 
-              value={editProject.budget || ''} 
-              onChange={(e) => setEditProject({ ...editProject, budget: e.target.value })} 
-              className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-            />
-          </div>
-          <div>
             <label className="text-sm text-gray-400 mb-2 block">Статус</label>
             <select 
               value={editProject.status} 

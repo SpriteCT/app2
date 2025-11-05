@@ -15,7 +15,6 @@ const CreateProjectModal = ({
     description: '',
     startDate: '',
     endDate: '',
-    budget: '',
     team: [],
   })
 
@@ -40,7 +39,6 @@ const CreateProjectModal = ({
         ...newProject,
         clientId: clientId,
         status: 'Active',
-        budget: newProject.budget ? Number(newProject.budget) : null,
         teamMemberIds: [],
       }
       const backendData = transformProjectToBackend(projectData)
@@ -62,7 +60,6 @@ const CreateProjectModal = ({
       description: '',
       startDate: '',
       endDate: '',
-      budget: '',
       team: [],
     })
     onClose()
@@ -147,16 +144,6 @@ const CreateProjectModal = ({
             </div>
           </div>
 
-          <div>
-            <label className="text-sm text-gray-400 mb-2 block">Бюджет проекта</label>
-            <input
-              type="number"
-              value={newProject.budget}
-              onChange={(e) => setNewProject({...newProject, budget: e.target.value})}
-              className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-              placeholder="1000000"
-            />
-          </div>
 
           <div>
             <label className="text-sm text-gray-400 mb-2 block">Описание</label>

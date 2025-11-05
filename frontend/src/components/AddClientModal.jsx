@@ -13,17 +13,11 @@ const AddClientModal = ({
     name: '',
     shortName: '',
     industry: '',
-    contactPerson: '',
-    position: '',
-    phone: '',
-    email: '',
-    sla: 'Standard',
-    securityLevel: 'High',
+    contacts: [],
     contractNumber: '',
     contractDate: '',
     contractExpiry: '',
     billingCycle: 'Monthly',
-    infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true },
     notes: '',
   })
 
@@ -39,17 +33,11 @@ const AddClientModal = ({
         name: '',
         shortName: '',
         industry: '',
-        contactPerson: '',
-        position: '',
-        phone: '',
-        email: '',
-        sla: 'Standard',
-        securityLevel: 'High',
+        contacts: [],
         contractNumber: '',
         contractDate: '',
         contractExpiry: '',
         billingCycle: 'Monthly',
-        infrastructure: { servers: 0, desktops: 0, networkDevices: 0, cloudServices: true, onPremise: true },
         notes: '',
       })
     } catch (error) {
@@ -102,29 +90,6 @@ const AddClientModal = ({
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-2 block">SLA</label>
-              <select 
-                value={newClient.sla} 
-                onChange={(e) => setNewClient({ ...newClient, sla: e.target.value })} 
-                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-              >
-                <option>Premium</option>
-                <option>Standard</option>
-                <option>Basic</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Уровень безопасности</label>
-              <select 
-                value={newClient.securityLevel} 
-                onChange={(e) => setNewClient({ ...newClient, securityLevel: e.target.value })} 
-                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-              >
-                <option>Critical</option>
-                <option>High</option>
-              </select>
-            </div>
-            <div>
               <label className="text-sm text-gray-400 mb-2 block">Биллинг</label>
               <select 
                 value={newClient.billingCycle} 
@@ -139,45 +104,11 @@ const AddClientModal = ({
           </div>
 
           <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-            <label className="text-sm text-gray-400 mb-3 block">Контактное лицо</label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">ФИО</label>
-                <input 
-                  type="text" 
-                  value={newClient.contactPerson} 
-                  onChange={(e) => setNewClient({ ...newClient, contactPerson: e.target.value })} 
-                  className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Должность</label>
-                <input 
-                  type="text" 
-                  value={newClient.position} 
-                  onChange={(e) => setNewClient({ ...newClient, position: e.target.value })} 
-                  className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Телефон</label>
-                <input 
-                  type="text" 
-                  value={newClient.phone} 
-                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} 
-                  className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Email</label>
-                <input 
-                  type="email" 
-                  value={newClient.email} 
-                  onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} 
-                  className="w-full px-4 py-2 bg-dark-surface border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-                />
-              </div>
-            </div>
+            <label className="text-sm text-gray-400 mb-3 block">Контакты</label>
+            <ClientContactsEditor 
+              contacts={newClient.contacts || []} 
+              onChange={(updated) => setNewClient({ ...newClient, contacts: updated })} 
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -207,30 +138,6 @@ const AddClientModal = ({
                 onChange={(e) => setNewClient({ ...newClient, contractExpiry: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-400 mb-2 block">Инфраструктура</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex items-center gap-3 text-sm text-white col-span-2 md:col-span-4">
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    checked={newClient.infrastructure.cloudServices} 
-                    onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, cloudServices: e.target.checked } })} 
-                  /> 
-                  Cloud
-                </label>
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    checked={newClient.infrastructure.onPremise} 
-                    onChange={(e) => setNewClient({ ...newClient, infrastructure: { ...newClient.infrastructure, onPremise: e.target.checked } })} 
-                  /> 
-                  On-Prem
-                </label>
-              </div>
             </div>
           </div>
 

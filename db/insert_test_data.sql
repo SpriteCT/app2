@@ -1,16 +1,17 @@
 -- Insert test data for Vulnerability Management System
 -- Run after schema.sql
 
--- ============ WORKERS ============
-INSERT INTO workers (id, full_name, email, phone) VALUES
-(1, 'Иванов И.И.', 'ivanov@company.ru', '+7 (495) 111-11-11'),
-(2, 'Петров П.П.', 'petrov@company.ru', '+7 (495) 111-11-12'),
-(3, 'Сидоров С.С.', 'sidorov@company.ru', '+7 (495) 111-11-13'),
-(4, 'Козлов К.К.', 'kozlov@company.ru', '+7 (495) 111-11-14'),
-(5, 'Морозов М.М.', 'morozov@company.ru', '+7 (495) 111-11-15'),
-(6, 'Волков В.В.', 'volkov@company.ru', '+7 (495) 111-11-16'),
-(7, 'Соколов С.С.', 'sokolov@company.ru', '+7 (495) 111-11-17'),
-(8, 'Лебедев Л.Л.', 'lebedev@company.ru', '+7 (495) 111-11-18');
+-- ============ USER ACCOUNTS (исполнители и заказчики) ============
+-- Исполнители (user_type = 'worker')
+INSERT INTO user_accounts (id, username, password_hash, full_name, email, phone, user_type, client_id) VALUES
+(1, 'ivanov', NULL, 'Иванов И.И.', 'ivanov@company.ru', '+7 (495) 111-11-11', 'worker', NULL),
+(2, 'petrov', NULL, 'Петров П.П.', 'petrov@company.ru', '+7 (495) 111-11-12', 'worker', NULL),
+(3, 'sidorov', NULL, 'Сидоров С.С.', 'sidorov@company.ru', '+7 (495) 111-11-13', 'worker', NULL),
+(4, 'kozlov', NULL, 'Козлов К.К.', 'kozlov@company.ru', '+7 (495) 111-11-14', 'worker', NULL),
+(5, 'morozov', NULL, 'Морозов М.М.', 'morozov@company.ru', '+7 (495) 111-11-15', 'worker', NULL),
+(6, 'volkov', NULL, 'Волков В.В.', 'volkov@company.ru', '+7 (495) 111-11-16', 'worker', NULL),
+(7, 'sokolov', NULL, 'Соколов С.С.', 'sokolov@company.ru', '+7 (495) 111-11-17', 'worker', NULL),
+(8, 'lebedev', NULL, 'Лебедев Л.Л.', 'lebedev@company.ru', '+7 (495) 111-11-18', 'worker', NULL);
 
 -- ============ ASSET TYPES ============
 INSERT INTO asset_types (id, name) VALUES
@@ -33,30 +34,38 @@ INSERT INTO scanners (id, name) VALUES
 (6, 'Qualys');
 
 -- ============ CLIENTS ============
-INSERT INTO clients (id, name, short_name, industry, contact_person, position, phone, email, sla, security_level, contract_number, contract_date, contract_expiry, billing_cycle, infra_cloud, infra_on_prem, notes) VALUES
-(1, 'ООО "ТехноСервис"', 'TSV', 'IT-инфраструктура', 'Иванов Иван Иванович', 'Директор по безопасности', '+7 (495) 123-45-67', 'ivanov@technoservice.ru', 'Premium', 'Critical', 'TS-2024-001', '2024-01-15', '2025-01-15', 'Monthly', TRUE, TRUE, 'Крупный IT-интегратор с критической инфраструктурой. Требует постоянного мониторинга.'),
-(2, 'АО "ФинансХост"', 'FNH', 'Финансовые услуги', 'Петров Петр Петрович', 'Руководитель информационной безопасности', '+7 (495) 234-56-78', 'petrov@finhost.ru', 'Standard', 'Critical', 'FH-2024-015', '2024-01-10', '2025-01-10', 'Quarterly', FALSE, TRUE, 'Финансовая организация. Особое внимание к комплаенсу и безопасности данных.'),
-(3, 'ООО "МедиаДиджитал"', 'MDD', 'Медиа', 'Сидоров С.С.', NULL, '+7 (495) 345-67-89', 'sidorov@mediadigital.ru', 'Basic', 'High', 'MD-2024-008', NULL, NULL, 'Monthly', FALSE, FALSE, NULL),
-(4, 'ИП Козлов К.К.', 'KZL', 'Консалтинг', 'Козлов К.К.', NULL, '+7 (495) 456-78-90', 'kozlov@example.ru', 'Basic', 'High', 'KZ-2024-003', NULL, NULL, 'Monthly', FALSE, FALSE, NULL),
-(5, 'ООО "РозницаПро"', 'RZP', 'Розничная торговля', 'Морозов М.М.', NULL, '+7 (495) 567-89-01', 'morozov@retailpro.ru', 'Standard', 'High', 'RT-2024-022', NULL, NULL, 'Monthly', FALSE, FALSE, NULL),
-(6, 'ЗАО "ВолковГрупп"', 'VGP', 'Промышленность', 'Волков В.В.', NULL, '+7 (495) 678-90-12', 'volkov@volkovgrp.ru', 'Premium', 'High', 'VG-2024-005', NULL, NULL, 'Monthly', FALSE, FALSE, NULL);
+INSERT INTO clients (id, name, short_name, industry, contract_number, contract_date, contract_expiry, billing_cycle, notes) VALUES
+(1, 'ООО "ТехноСервис"', 'TSV', 'IT-инфраструктура', 'TS-2024-001', '2024-01-15', '2025-01-15', 'Monthly', 'Крупный IT-интегратор с критической инфраструктурой. Требует постоянного мониторинга.'),
+(2, 'АО "ФинансХост"', 'FNH', 'Финансовые услуги', 'FH-2024-015', '2024-01-10', '2025-01-10', 'Quarterly', 'Финансовая организация. Особое внимание к комплаенсу и безопасности данных.'),
+(3, 'ООО "МедиаДиджитал"', 'MDD', 'Медиа', 'MD-2024-008', NULL, NULL, 'Monthly', NULL),
+(4, 'ИП Козлов К.К.', 'KZL', 'Консалтинг', 'KZ-2024-003', NULL, NULL, 'Monthly', NULL),
+(5, 'ООО "РозницаПро"', 'RZP', 'Розничная торговля', 'RT-2024-022', NULL, NULL, 'Monthly', NULL),
+(6, 'ЗАО "ВолковГрупп"', 'VGP', 'Промышленность', 'VG-2024-005', NULL, NULL, 'Monthly', NULL);
 
--- ============ CLIENT ADDITIONAL CONTACTS ============
-INSERT INTO client_additional_contacts (id, client_id, name, role, phone, email) VALUES
-(1, 1, 'Петров Петр Петрович', 'IT-директор', '+7 (495) 123-45-68', 'petrov@technoservice.ru'),
-(2, 2, 'Сидоров Сидор Сидорович', 'Network Admin', '+7 (495) 234-56-79', 'sidorov@finhost.ru');
+-- ============ CLIENT CONTACTS ============
+INSERT INTO client_contacts (id, client_id, name, role, phone, email, is_primary) VALUES
+-- Основные контакты (is_primary = TRUE)
+(1, 1, 'Иванов Иван Иванович', 'Директор по безопасности', '+7 (495) 123-45-67', 'ivanov@technoservice.ru', TRUE),
+(2, 2, 'Петров Петр Петрович', 'Руководитель информационной безопасности', '+7 (495) 234-56-78', 'petrov@finhost.ru', TRUE),
+(3, 3, 'Сидоров С.С.', NULL, '+7 (495) 345-67-89', 'sidorov@mediadigital.ru', TRUE),
+(4, 4, 'Козлов К.К.', NULL, '+7 (495) 456-78-90', 'kozlov@example.ru', TRUE),
+(5, 5, 'Морозов М.М.', NULL, '+7 (495) 567-89-01', 'morozov@retailpro.ru', TRUE),
+(6, 6, 'Волков В.В.', NULL, '+7 (495) 678-90-12', 'volkov@volkovgrp.ru', TRUE),
+-- Дополнительные контакты (is_primary = FALSE)
+(7, 1, 'Петров Петр Петрович', 'IT-директор', '+7 (495) 123-45-68', 'petrov@technoservice.ru', FALSE),
+(8, 2, 'Сидоров Сидор Сидорович', 'Network Admin', '+7 (495) 234-56-79', 'sidorov@finhost.ru', FALSE);
 
 -- ============ PROJECTS ============
-INSERT INTO projects (id, client_id, name, description, type, status, priority, start_date, end_date, budget) VALUES
-(1, 1, 'Безопасность инфраструктуры', 'Регулярное сканирование инфраструктуры на уязвимости с ежемесячными отчетами', 'Vulnerability Scanning', 'Active', 'High', '2024-01-15', '2024-12-31', 1500000),
-(2, 1, 'Breach and Attack Simulation', 'Симуляция атак на инфраструктуру для проверки эффективности защиты', 'BAS', 'Planning', 'High', '2024-02-01', '2024-05-01', 1200000),
-(3, 2, 'Аудит безопасности', 'Глубокий пентест с фокусом на финансовые системы и базы данных', 'Penetration Test', 'Active', 'Critical', '2024-01-08', '2024-03-08', 800000),
-(4, 3, 'Сканирование сетевое', 'Непрерывное сканирование сети на открытые порты и сетевое оборудование', 'Network Scanning', 'Active', 'Medium', '2024-01-05', '2024-06-05', 500000),
-(5, 5, 'Web Security Audit', 'Сканирование веб-приложений на SQL Injection, XSS и другие уязвимости', 'Web Application Scanning', 'Active', 'Medium', '2024-01-14', '2024-04-14', 600000),
-(6, 6, 'Compliance Check', 'Проверка соответствия стандартам ISO 27001, GDPR', 'Compliance Check', 'Active', 'High', '2024-01-08', '2024-03-08', 900000);
+INSERT INTO projects (id, client_id, name, description, type, status, priority, start_date, end_date) VALUES
+(1, 1, 'Безопасность инфраструктуры', 'Регулярное сканирование инфраструктуры на уязвимости с ежемесячными отчетами', 'Vulnerability Scanning', 'Active', 'High', '2024-01-15', '2024-12-31'),
+(2, 1, 'Breach and Attack Simulation', 'Симуляция атак на инфраструктуру для проверки эффективности защиты', 'BAS', 'Planning', 'High', '2024-02-01', '2024-05-01'),
+(3, 2, 'Аудит безопасности', 'Глубокий пентест с фокусом на финансовые системы и базы данных', 'Penetration Test', 'Active', 'Critical', '2024-01-08', '2024-03-08'),
+(4, 3, 'Сканирование сетевое', 'Непрерывное сканирование сети на открытые порты и сетевое оборудование', 'Network Scanning', 'Active', 'Medium', '2024-01-05', '2024-06-05'),
+(5, 5, 'Web Security Audit', 'Сканирование веб-приложений на SQL Injection, XSS и другие уязвимости', 'Web Application Scanning', 'Active', 'Medium', '2024-01-14', '2024-04-14'),
+(6, 6, 'Compliance Check', 'Проверка соответствия стандартам ISO 27001, GDPR', 'Compliance Check', 'Active', 'High', '2024-01-08', '2024-03-08');
 
 -- ============ PROJECT TEAM MEMBERS ============
-INSERT INTO project_team_members (id, project_id, worker_id) VALUES
+INSERT INTO project_team_members (id, project_id, user_account_id) VALUES
 (1, 1, 1),
 (2, 1, 2),
 (3, 2, 1),
@@ -141,11 +150,11 @@ INSERT INTO gantt_tasks (id, project_id, name, start_date, end_date) VALUES
 
 -- Fix sequences after inserting data with explicit IDs
 -- This ensures that new records get correct auto-incrementing IDs
-SELECT setval('workers_id_seq', COALESCE((SELECT MAX(id) FROM workers), 1), true);
+SELECT setval('user_accounts_id_seq', COALESCE((SELECT MAX(id) FROM user_accounts), 1), true);
 SELECT setval('asset_types_id_seq', COALESCE((SELECT MAX(id) FROM asset_types), 1), true);
 SELECT setval('scanners_id_seq', COALESCE((SELECT MAX(id) FROM scanners), 1), true);
 SELECT setval('clients_id_seq', COALESCE((SELECT MAX(id) FROM clients), 1), true);
-SELECT setval('client_additional_contacts_id_seq', COALESCE((SELECT MAX(id) FROM client_additional_contacts), 1), true);
+SELECT setval('client_contacts_id_seq', COALESCE((SELECT MAX(id) FROM client_contacts), 1), true);
 SELECT setval('projects_id_seq', COALESCE((SELECT MAX(id) FROM projects), 1), true);
 SELECT setval('project_team_members_id_seq', COALESCE((SELECT MAX(id) FROM project_team_members), 1), true);
 SELECT setval('assets_id_seq', COALESCE((SELECT MAX(id) FROM assets), 1), true);

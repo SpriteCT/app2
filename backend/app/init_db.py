@@ -12,11 +12,11 @@ def fix_sequences():
     This should be called after bulk inserts with explicit IDs.
     """
     sequences = [
-        ('workers_id_seq', 'workers'),
+        ('user_accounts_id_seq', 'user_accounts'),
         ('asset_types_id_seq', 'asset_types'),
         ('scanners_id_seq', 'scanners'),
         ('clients_id_seq', 'clients'),
-        ('client_additional_contacts_id_seq', 'client_additional_contacts'),
+        ('client_contacts_id_seq', 'client_contacts'),
         ('projects_id_seq', 'projects'),
         ('project_team_members_id_seq', 'project_team_members'),
         ('assets_id_seq', 'assets'),
