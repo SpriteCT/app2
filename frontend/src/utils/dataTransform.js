@@ -11,7 +11,6 @@ export const transformClient = (backendClient) => {
     id: backendClient.id,
     name: backendClient.name,
     shortName: backendClient.short_name,
-    code: backendClient.short_name, // Alias for compatibility
     industry: backendClient.industry,
     contactPerson: primaryContact?.name || '',
     position: primaryContact?.role || '',
@@ -298,19 +297,6 @@ export const transformWorker = (backendUser) => {
     phone: backendUser.phone,
     userType: backendUser.user_type,
     clientId: backendUser.client_id,
-  }
-}
-
-// Transform user account from frontend to backend format
-export const transformWorkerToBackend = (frontendUser) => {
-  return {
-    username: frontendUser.username,
-    password_hash: frontendUser.passwordHash,
-    full_name: frontendUser.fullName,
-    email: frontendUser.email,
-    phone: frontendUser.phone,
-    user_type: frontendUser.userType || 'worker',
-    client_id: frontendUser.clientId || null,
   }
 }
 

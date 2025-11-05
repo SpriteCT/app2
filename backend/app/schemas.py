@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import date, datetime
 from app.models import (
-    SLAType, SecurityLevelType, BillingCycleType, ProjectType, ProjectStatus,
+    ProjectType, ProjectStatus,
     PriorityType, AssetStatus, VulnStatus, TicketStatus
 )
 

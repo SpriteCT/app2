@@ -65,28 +65,20 @@ async function apiRequest(endpoint, options = {}) {
 // Clients API
 export const clientsApi = {
   getAll: () => apiRequest('/clients/'),
-  getById: (id) => apiRequest(`/clients/${id}`),
   create: (data) => apiRequest('/clients/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/clients/${id}`, { method: 'PUT', body: data }),
-  delete: (id) => apiRequest(`/clients/${id}`, { method: 'DELETE' }),
-  addContact: (clientId, data) => apiRequest(`/clients/${clientId}/contacts/`, { method: 'POST', body: data }),
-  updateContact: (clientId, contactId, data) => apiRequest(`/clients/${clientId}/contacts/${contactId}`, { method: 'PUT', body: data }),
-  deleteContact: (clientId, contactId) => apiRequest(`/clients/${clientId}/contacts/${contactId}`, { method: 'DELETE' }),
 }
 
 // Projects API
 export const projectsApi = {
   getAll: () => apiRequest('/projects/'),
-  getById: (id) => apiRequest(`/projects/${id}`),
   create: (data) => apiRequest('/projects/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/projects/${id}`, { method: 'PUT', body: data }),
-  delete: (id) => apiRequest(`/projects/${id}`, { method: 'DELETE' }),
 }
 
 // Assets API
 export const assetsApi = {
   getAll: () => apiRequest('/assets/'),
-  getById: (id) => apiRequest(`/assets/${id}`),
   create: (data) => apiRequest('/assets/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/assets/${id}`, { method: 'PUT', body: data }),
   delete: (id) => apiRequest(`/assets/${id}`, { method: 'DELETE' }),
@@ -95,7 +87,6 @@ export const assetsApi = {
 // Vulnerabilities API
 export const vulnerabilitiesApi = {
   getAll: () => apiRequest('/vulnerabilities/'),
-  getById: (id) => apiRequest(`/vulnerabilities/${id}`),
   create: (data) => apiRequest('/vulnerabilities/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/vulnerabilities/${id}`, { method: 'PUT', body: data }),
   delete: (id) => apiRequest(`/vulnerabilities/${id}`, { method: 'DELETE' }),
@@ -111,13 +102,9 @@ export const ticketsApi = {
   addMessage: (ticketId, data) => apiRequest(`/tickets/${ticketId}/messages/`, { method: 'POST', body: data }),
 }
 
-// Workers API
+// Workers API (user accounts)
 export const workersApi = {
   getAll: () => apiRequest('/workers/'),
-  getById: (id) => apiRequest(`/workers/${id}`),
-  create: (data) => apiRequest('/workers/', { method: 'POST', body: data }),
-  update: (id, data) => apiRequest(`/workers/${id}`, { method: 'PUT', body: data }),
-  delete: (id) => apiRequest(`/workers/${id}`, { method: 'DELETE' }),
 }
 
 // Reference data API

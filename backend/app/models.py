@@ -11,23 +11,6 @@ from app.database import Base
 
 
 # Enums
-class SLAType(str, enum.Enum):
-    PREMIUM = "Premium"
-    STANDARD = "Standard"
-    BASIC = "Basic"
-
-
-class SecurityLevelType(str, enum.Enum):
-    CRITICAL = "Critical"
-    HIGH = "High"
-
-
-class BillingCycleType(str, enum.Enum):
-    MONTHLY = "Monthly"
-    QUARTERLY = "Quarterly"
-    YEARLY = "Yearly"
-
-
 class ProjectType(str, enum.Enum):
     VULNERABILITY_SCANNING = "Vulnerability Scanning"
     PENETRATION_TEST = "Penetration Test"

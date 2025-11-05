@@ -110,11 +110,9 @@ CREATE TABLE IF NOT EXISTS projects (
   priority     priority_type NOT NULL DEFAULT 'High',
   start_date   DATE NOT NULL,
   end_date     DATE NOT NULL,
-  progress     SMALLINT NOT NULL DEFAULT 0,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT chk_project_dates CHECK (start_date <= end_date),
-  CONSTRAINT chk_project_progress CHECK (progress BETWEEN 0 AND 100)
+  CONSTRAINT chk_project_dates CHECK (start_date <= end_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id);
@@ -157,7 +155,6 @@ CREATE TABLE IF NOT EXISTS vulnerabilities (
   asset_id       INTEGER REFERENCES assets(id) ON DELETE SET NULL,
   title          TEXT NOT NULL,
   description    TEXT,
-  asset_type_id  INTEGER REFERENCES asset_types(id) ON DELETE SET NULL,
   scanner_id     INTEGER REFERENCES scanners(id) ON DELETE SET NULL,
   status         vuln_status NOT NULL,
   criticality    priority_type NOT NULL,
@@ -173,7 +170,6 @@ CREATE TABLE IF NOT EXISTS vulnerabilities (
 
 CREATE INDEX IF NOT EXISTS idx_vulns_client ON vulnerabilities(client_id);
 CREATE INDEX IF NOT EXISTS idx_vulns_asset ON vulnerabilities(asset_id);
-CREATE INDEX IF NOT EXISTS idx_vulns_asset_type ON vulnerabilities(asset_type_id);
 CREATE INDEX IF NOT EXISTS idx_vulns_scanner ON vulnerabilities(scanner_id);
 
 -- vulnerability_tags table removed
