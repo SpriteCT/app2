@@ -3,6 +3,7 @@ import { Search, Filter, Plus, Download, Eye, Edit, Trash2, Ticket, MessageCircl
 import { priorityColors, statusColorsTickets } from '../config/colors'
 import { ticketsApi, workersApi, vulnerabilitiesApi, clientsApi, assetsApi, referenceApi } from '../services/api'
 import { transformTicket, transformWorker, transformVulnerability, transformTicketToBackend, transformAsset } from '../utils/dataTransform'
+import { formatDate } from '../utils/dateUtils'
 import TicketDetailModal from '../components/TicketDetailModal'
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
 import CreateTicketModal from '../components/CreateTicketModal'
@@ -259,30 +260,50 @@ const TicketsPage = ({ selectedClient, currentUser }) => {
 
         {/* Stats */}
         <div className="grid grid-cols-5 gap-4 mb-4">
-          <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-lg p-4">
+          <button
+            onClick={() => setSelectedPriority(selectedPriority === 'Critical' ? 'All' : 'Critical')}
+            className={`bg-gradient-to-br from-red-600/20 to-red-800/20 border rounded-lg p-4 transition-all hover:scale-105 cursor-pointer ${
+              selectedPriority === 'Critical' ? 'border-red-500 border-2' : 'border-red-500/30'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-red-400 text-sm">Critical</span>
               <span className="text-2xl font-bold text-red-400">{priorityCounts.Critical}</span>
             </div>
-          </div>
-          <div className="bg-gradient-to-br from-orange-600/20 to-orange-800/20 border border-orange-500/30 rounded-lg p-4">
+          </button>
+          <button
+            onClick={() => setSelectedPriority(selectedPriority === 'High' ? 'All' : 'High')}
+            className={`bg-gradient-to-br from-orange-600/20 to-orange-800/20 border rounded-lg p-4 transition-all hover:scale-105 cursor-pointer ${
+              selectedPriority === 'High' ? 'border-orange-500 border-2' : 'border-orange-500/30'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-orange-400 text-sm">High</span>
               <span className="text-2xl font-bold text-orange-400">{priorityCounts.High}</span>
             </div>
-          </div>
-          <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 border border-yellow-500/30 rounded-lg p-4">
+          </button>
+          <button
+            onClick={() => setSelectedPriority(selectedPriority === 'Medium' ? 'All' : 'Medium')}
+            className={`bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 border rounded-lg p-4 transition-all hover:scale-105 cursor-pointer ${
+              selectedPriority === 'Medium' ? 'border-yellow-500 border-2' : 'border-yellow-500/30'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-yellow-400 text-sm">Medium</span>
               <span className="text-2xl font-bold text-yellow-400">{priorityCounts.Medium}</span>
             </div>
-          </div>
-          <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-lg p-4">
+          </button>
+          <button
+            onClick={() => setSelectedPriority(selectedPriority === 'Low' ? 'All' : 'Low')}
+            className={`bg-gradient-to-br from-blue-600/20 to-blue-800/20 border rounded-lg p-4 transition-all hover:scale-105 cursor-pointer ${
+              selectedPriority === 'Low' ? 'border-blue-500 border-2' : 'border-blue-500/30'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-blue-400 text-sm">Low</span>
               <span className="text-2xl font-bold text-blue-400">{priorityCounts.Low}</span>
             </div>
-          </div>
+          </button>
           <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-purple-400 text-sm">Всего</span>
@@ -293,18 +314,33 @@ const TicketsPage = ({ selectedClient, currentUser }) => {
 
         {/* Status Stats */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
+          <button
+            onClick={() => setSelectedStatus(selectedStatus === 'Open' ? 'All' : 'Open')}
+            className={`bg-dark-surface border rounded-lg p-3 transition-all hover:scale-105 cursor-pointer ${
+              selectedStatus === 'Open' ? 'border-purple-500 border-2' : 'border-dark-border'
+            }`}
+          >
             <div className="text-sm text-gray-400 mb-1">Открыто</div>
             <div className="text-2xl font-bold text-purple-400">{statusCounts.Open}</div>
-          </div>
-          <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
+          </button>
+          <button
+            onClick={() => setSelectedStatus(selectedStatus === 'In Progress' ? 'All' : 'In Progress')}
+            className={`bg-dark-surface border rounded-lg p-3 transition-all hover:scale-105 cursor-pointer ${
+              selectedStatus === 'In Progress' ? 'border-blue-500 border-2' : 'border-dark-border'
+            }`}
+          >
             <div className="text-sm text-gray-400 mb-1">В работе</div>
             <div className="text-2xl font-bold text-blue-400">{statusCounts['In Progress']}</div>
-          </div>
-          <div className="bg-dark-surface border border-dark-border rounded-lg p-3">
+          </button>
+          <button
+            onClick={() => setSelectedStatus(selectedStatus === 'Closed' ? 'All' : 'Closed')}
+            className={`bg-dark-surface border rounded-lg p-3 transition-all hover:scale-105 cursor-pointer ${
+              selectedStatus === 'Closed' ? 'border-gray-500 border-2' : 'border-dark-border'
+            }`}
+          >
             <div className="text-sm text-gray-400 mb-1">Закрыто</div>
             <div className="text-2xl font-bold text-gray-400">{statusCounts.Closed}</div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -405,14 +441,14 @@ const TicketsPage = ({ selectedClient, currentUser }) => {
                       <span className="text-sm text-gray-300">{ticket.assigneeName || '—'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                      {formatDate(ticket.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {ticket.dueDate ? (
                         <div className="flex items-center gap-2">
                           <Clock className={`w-4 h-4 ${isOverdue ? 'text-red-400' : daysUntil <= 3 ? 'text-yellow-400' : 'text-gray-400'}`} />
                           <span className={`text-sm ${isOverdue ? 'text-red-400' : daysUntil <= 3 ? 'text-yellow-400' : 'text-gray-300'}`}>
-                            {new Date(ticket.dueDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            {formatDate(ticket.dueDate, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </span>
                         </div>
                       ) : (

@@ -2,12 +2,35 @@
 -- Requires: PostgreSQL 13+
 -- All IDs use SERIAL (auto-incrementing INTEGER) instead of UUID
 
+-- ============ ENUM TYPES ============
+
+DO $$ BEGIN
+  CREATE TYPE priority_type AS ENUM ('Critical','High','Medium','Low');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE project_status AS ENUM ('Active','Planning','On Hold','Completed','Cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE asset_status AS ENUM ('В эксплуатации','Недоступен','В обслуживании','Выведен из эксплуатации');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE vuln_status AS ENUM ('Open','In Progress','Closed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE ticket_status AS ENUM ('Open','In Progress','Closed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- ============ REFERENCE TABLES (must be created first) ============
 
 -- Asset Types (reference table)
 CREATE TABLE IF NOT EXISTS asset_types (
   id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  is_deleted  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -15,55 +38,17 @@ CREATE TABLE IF NOT EXISTS asset_types (
 -- Scanners (reference table)
 CREATE TABLE IF NOT EXISTS scanners (
   id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  is_deleted  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Project Types (reference table replacing ENUM)
+-- Project Types (reference table)
 CREATE TABLE IF NOT EXISTS project_types (
   id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Project Statuses (reference table replacing ENUM)
-CREATE TABLE IF NOT EXISTS project_statuses (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Priority Levels (reference table replacing ENUM, used by projects, assets, vulnerabilities, tickets)
-CREATE TABLE IF NOT EXISTS priority_levels (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Asset Statuses (reference table replacing ENUM)
-CREATE TABLE IF NOT EXISTS asset_statuses (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Vulnerability Statuses (reference table replacing ENUM)
-CREATE TABLE IF NOT EXISTS vuln_statuses (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Ticket Statuses (reference table replacing ENUM)
-CREATE TABLE IF NOT EXISTS ticket_statuses (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  is_deleted  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -133,9 +118,9 @@ CREATE TABLE IF NOT EXISTS projects (
   client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   name         TEXT NOT NULL,
   description  TEXT,
-  type_id       INTEGER NOT NULL REFERENCES project_types(id) ON DELETE RESTRICT,
-  status_id     INTEGER NOT NULL REFERENCES project_statuses(id) ON DELETE RESTRICT,
-  priority_id   INTEGER NOT NULL REFERENCES priority_levels(id) ON DELETE RESTRICT,
+  type_id      INTEGER NOT NULL REFERENCES project_types(id) ON DELETE RESTRICT,
+  status       project_status NOT NULL,
+  priority     priority_type NOT NULL,
   start_date   DATE NOT NULL,
   end_date     DATE NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -145,8 +130,8 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id);
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type_id);
-CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status_id);
-CREATE INDEX IF NOT EXISTS idx_projects_priority ON projects(priority_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_projects_priority ON projects(priority);
 
 -- project_deliverables table removed
 
@@ -168,8 +153,8 @@ CREATE TABLE IF NOT EXISTS assets (
   type_id           INTEGER NOT NULL REFERENCES asset_types(id) ON DELETE RESTRICT,
   ip_address        TEXT,
   operating_system  TEXT,
-  status_id         INTEGER NOT NULL REFERENCES asset_statuses(id) ON DELETE RESTRICT,
-  criticality_id    INTEGER NOT NULL REFERENCES priority_levels(id) ON DELETE RESTRICT,
+  status            asset_status NOT NULL,
+  criticality       priority_type NOT NULL,
   last_scan         TIMESTAMPTZ,
   is_deleted        BOOLEAN NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -178,8 +163,8 @@ CREATE TABLE IF NOT EXISTS assets (
 
 CREATE INDEX IF NOT EXISTS idx_assets_client ON assets(client_id);
 CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(type_id);
-CREATE INDEX IF NOT EXISTS idx_assets_status ON assets(status_id);
-CREATE INDEX IF NOT EXISTS idx_assets_criticality ON assets(criticality_id);
+CREATE INDEX IF NOT EXISTS idx_assets_status ON assets(status);
+CREATE INDEX IF NOT EXISTS idx_assets_criticality ON assets(criticality);
 
 CREATE TABLE IF NOT EXISTS vulnerabilities (
   id             SERIAL PRIMARY KEY,
@@ -189,8 +174,8 @@ CREATE TABLE IF NOT EXISTS vulnerabilities (
   title          TEXT NOT NULL,
   description    TEXT,
   scanner_id     INTEGER REFERENCES scanners(id) ON DELETE SET NULL,
-  status_id      INTEGER NOT NULL REFERENCES vuln_statuses(id) ON DELETE RESTRICT,
-  criticality_id INTEGER NOT NULL REFERENCES priority_levels(id) ON DELETE RESTRICT,
+  status         vuln_status NOT NULL,
+  criticality    priority_type NOT NULL,
   cvss           NUMERIC CHECK (cvss IS NULL OR (cvss >= 0 AND cvss <= 10)),
   cve            TEXT, 
   discovered     DATE,
@@ -204,8 +189,8 @@ CREATE TABLE IF NOT EXISTS vulnerabilities (
 CREATE INDEX IF NOT EXISTS idx_vulns_client ON vulnerabilities(client_id);
 CREATE INDEX IF NOT EXISTS idx_vulns_asset ON vulnerabilities(asset_id);
 CREATE INDEX IF NOT EXISTS idx_vulns_scanner ON vulnerabilities(scanner_id);
-CREATE INDEX IF NOT EXISTS idx_vulns_status ON vulnerabilities(status_id);
-CREATE INDEX IF NOT EXISTS idx_vulns_criticality ON vulnerabilities(criticality_id);
+CREATE INDEX IF NOT EXISTS idx_vulns_status ON vulnerabilities(status);
+CREATE INDEX IF NOT EXISTS idx_vulns_criticality ON vulnerabilities(criticality);
 
 -- vulnerability_tags table removed
 
@@ -217,8 +202,8 @@ CREATE TABLE IF NOT EXISTS tickets (
   description  TEXT,
   assignee_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
   reporter_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  priority_id  INTEGER NOT NULL REFERENCES priority_levels(id) ON DELETE RESTRICT,
-  status_id    INTEGER NOT NULL REFERENCES ticket_statuses(id) ON DELETE RESTRICT,
+  priority     priority_type NOT NULL,
+  status       ticket_status NOT NULL,
   is_deleted   BOOLEAN NOT NULL DEFAULT FALSE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -228,8 +213,8 @@ CREATE TABLE IF NOT EXISTS tickets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tickets_client ON tickets(client_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets(priority_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets(priority);
 CREATE INDEX IF NOT EXISTS idx_tickets_reporter ON tickets(reporter_id);
 
 CREATE TABLE IF NOT EXISTS ticket_messages (
@@ -267,5 +252,10 @@ CREATE TABLE IF NOT EXISTS gantt_tasks (
 -- You can implement as a trigger function comparing to projects.start_date/end_date.
 
 CREATE INDEX IF NOT EXISTS idx_gantt_tasks_project ON gantt_tasks(project_id);
+
+-- Unique indexes with WHERE clause for soft-deleted reference tables
+CREATE UNIQUE INDEX IF NOT EXISTS uq_asset_types_name_active ON asset_types(name) WHERE is_deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_scanners_name_active ON scanners(name) WHERE is_deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_project_types_name_active ON project_types(name) WHERE is_deleted = FALSE;
 
 

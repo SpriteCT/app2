@@ -43,23 +43,16 @@ def get_tickets(
         joinedload(Ticket.assignee).joinedload(User.worker_profile),
         joinedload(Ticket.reporter).joinedload(User.client_profile),
         joinedload(Ticket.reporter).joinedload(User.worker_profile),
-        joinedload(Ticket.priority),
-        joinedload(Ticket.status),
         joinedload(Ticket.client)
     )
-    from app.models import TicketStatus, PriorityLevel
     if client_id:
         query = query.filter(Ticket.client_id == client_id)
     if status:
-        # Filter by status name (find ID first)
-        status_obj = db.query(TicketStatus).filter(TicketStatus.name == status).first()
-        if status_obj:
-            query = query.filter(Ticket.status_id == status_obj.id)
+        # Filter by status string directly
+        query = query.filter(Ticket.status == status)
     if priority:
-        # Filter by priority name (find ID first)
-        priority_obj = db.query(PriorityLevel).filter(PriorityLevel.name == priority).first()
-        if priority_obj:
-            query = query.filter(Ticket.priority_id == priority_obj.id)
+        # Filter by priority string directly
+        query = query.filter(Ticket.priority == priority)
     tickets = query.offset(skip).limit(limit).all()
     print(f"Found {len(tickets)} tickets in database")
     # Ensure vulnerabilities are loaded for each ticket
@@ -85,8 +78,6 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
         joinedload(Ticket.assignee).joinedload(User.worker_profile),
         joinedload(Ticket.reporter).joinedload(User.client_profile),
         joinedload(Ticket.reporter).joinedload(User.worker_profile),
-        joinedload(Ticket.priority),
-        joinedload(Ticket.status),
         joinedload(Ticket.client)
     ).filter(Ticket.id == ticket_id).first()
     if not ticket:
@@ -189,14 +180,11 @@ def update_ticket(
     
     # Load relationships for old values
     db.refresh(db_ticket)
-    from app.models import TicketStatus, PriorityLevel
     
     # Store old values for change tracking
-    old_status_name = db_ticket.status.name if db_ticket.status else None
-    old_priority_name = db_ticket.priority.name if db_ticket.priority else None
     old_values = {
-        'status_id': db_ticket.status_id,
-        'priority_id': db_ticket.priority_id,
+        'status': db_ticket.status,
+        'priority': db_ticket.priority,
         'assignee_id': db_ticket.assignee_id,
         'due_date': db_ticket.due_date,
         'title': db_ticket.title,
@@ -212,19 +200,11 @@ def update_ticket(
         
         # Check if value actually changed
         if old_value != value:
-            if field == 'status_id':
+            if field == 'status':
                 status_changed = True
-                # Get status names for display
-                old_status_name_for_change = old_status_name
-                new_status_obj = db.query(TicketStatus).filter(TicketStatus.id == value).first()
-                new_status_name_for_change = new_status_obj.name if new_status_obj else str(value)
-                changes.append(('status', old_status_name_for_change or str(old_value), new_status_name_for_change))
-            elif field == 'priority_id':
-                # Get priority names for display
-                old_priority_name_for_change = old_priority_name
-                new_priority_obj = db.query(PriorityLevel).filter(PriorityLevel.id == value).first()
-                new_priority_name_for_change = new_priority_obj.name if new_priority_obj else str(value)
-                changes.append(('priority', old_priority_name_for_change or str(old_value), new_priority_name_for_change))
+                changes.append(('status', str(old_value) if old_value else 'не установлен', str(value) if value else 'не установлен'))
+            elif field == 'priority':
+                changes.append(('priority', str(old_value) if old_value else 'не установлен', str(value) if value else 'не установлен'))
             elif field == 'assignee_id':
                 # Get assignee names
                 old_assignee = None
@@ -269,27 +249,21 @@ def update_ticket(
         setattr(db_ticket, field, value)
     
     # If status changed, update related vulnerabilities
-    if status_changed and db_ticket.status_id:
+    if status_changed and db_ticket.status:
         # Get all vulnerabilities linked to this ticket
-        from app.models import VulnStatus
         ticket_vulns = db.query(TicketVulnerability).filter(
             TicketVulnerability.ticket_id == ticket_id
         ).all()
         
-        # Map ticket status to vulnerability status
+        # Map ticket status to vulnerability status directly (they use the same values)
         # "Closed" -> "Closed", "Open" -> "Open", "In Progress" -> "In Progress"
-        ticket_status_obj = db.query(TicketStatus).filter(TicketStatus.id == db_ticket.status_id).first()
-        if ticket_status_obj:
-            # Find matching vuln status by name
-            vuln_status_obj = db.query(VulnStatus).filter(VulnStatus.name == ticket_status_obj.name).first()
-            if vuln_status_obj:
-                for ticket_vuln in ticket_vulns:
-                    vulnerability = db.query(Vulnerability).filter(
-                        Vulnerability.id == ticket_vuln.vulnerability_id
-                    ).first()
-                    if vulnerability:
-                        vulnerability.status_id = vuln_status_obj.id
-                        vulnerability.updated_at = datetime.now(timezone.utc)
+        for ticket_vuln in ticket_vulns:
+            vulnerability = db.query(Vulnerability).filter(
+                Vulnerability.id == ticket_vuln.vulnerability_id
+            ).first()
+            if vulnerability:
+                vulnerability.status = db_ticket.status
+                vulnerability.updated_at = datetime.now(timezone.utc)
     
     # Update vulnerabilities if provided
     if "vulnerability_ids" in ticket_update.model_dump(exclude_unset=True):

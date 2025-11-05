@@ -3,6 +3,7 @@ import { Search, Filter, Plus, Download, Eye, Edit, Trash2, AlertTriangle, Ticke
 import { criticalityColors, statusColors } from '../config/colors'
 import { vulnerabilitiesApi, assetsApi, referenceApi, clientsApi, ticketsApi, workersApi } from '../services/api'
 import { transformVulnerability, transformAsset, transformTicket, transformVulnerabilityToBackend, transformWorker } from '../utils/dataTransform'
+import { formatDate } from '../utils/dateUtils'
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
 import CreateTicketModal from '../components/CreateTicketModal'
 import TicketDetailModal from '../components/TicketDetailModal'
@@ -312,7 +313,7 @@ const VulnerabilitiesPage = ({ selectedClient }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{v.cve || '-'}</td>
                   
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {v.discovered ? new Date(v.discovered).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                    {formatDate(v.discovered, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">

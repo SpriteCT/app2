@@ -29,28 +29,21 @@ def get_vulnerabilities(
 ):
     """Get all vulnerabilities, optionally filtered"""
     from sqlalchemy.orm import joinedload
-    from app.models import VulnStatus, PriorityLevel
     query = db.query(Vulnerability).filter(Vulnerability.is_deleted == False).options(
         joinedload(Vulnerability.asset).joinedload(Asset.type),
         joinedload(Vulnerability.scanner),
-        joinedload(Vulnerability.client),
-        joinedload(Vulnerability.status),
-        joinedload(Vulnerability.criticality)
+        joinedload(Vulnerability.client)
     )
     if client_id:
         query = query.filter(Vulnerability.client_id == client_id)
     if asset_id:
         query = query.filter(Vulnerability.asset_id == asset_id)
     if status:
-        # Filter by status name (find ID first)
-        status_obj = db.query(VulnStatus).filter(VulnStatus.name == status).first()
-        if status_obj:
-            query = query.filter(Vulnerability.status_id == status_obj.id)
+        # Filter by status string directly
+        query = query.filter(Vulnerability.status == status)
     if criticality:
-        # Filter by criticality name (find ID first)
-        criticality_obj = db.query(PriorityLevel).filter(PriorityLevel.name == criticality).first()
-        if criticality_obj:
-            query = query.filter(Vulnerability.criticality_id == criticality_obj.id)
+        # Filter by criticality string directly
+        query = query.filter(Vulnerability.criticality == criticality)
     vulnerabilities = query.offset(skip).limit(limit).all()
     return vulnerabilities
 
@@ -62,9 +55,7 @@ def get_vulnerability(vulnerability_id: int, db: Session = Depends(get_db)):
     vulnerability = db.query(Vulnerability).filter(Vulnerability.id == vulnerability_id, Vulnerability.is_deleted == False).options(
         joinedload(Vulnerability.asset).joinedload(Asset.type),
         joinedload(Vulnerability.scanner),
-        joinedload(Vulnerability.client),
-        joinedload(Vulnerability.status),
-        joinedload(Vulnerability.criticality)
+        joinedload(Vulnerability.client)
     ).first()
     if not vulnerability:
         raise HTTPException(

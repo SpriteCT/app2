@@ -12,21 +12,17 @@ const EditProjectModal = ({
 }) => {
   const [editProject, setEditProject] = useState(null)
   const [projectTypes, setProjectTypes] = useState([])
-  const [projectStatuses, setProjectStatuses] = useState([])
-  const [priorityLevels, setPriorityLevels] = useState([])
+  
+  // ENUM values
+  const projectStatuses = ['Active', 'Planning', 'On Hold', 'Completed', 'Cancelled']
+  const priorityLevels = ['Critical', 'High', 'Medium', 'Low']
 
   useEffect(() => {
     if (isOpen) {
       const loadReferenceData = async () => {
         try {
-          const [types, statuses, priorities] = await Promise.all([
-            referenceApi.getProjectTypes(),
-            referenceApi.getProjectStatuses(),
-            referenceApi.getPriorityLevels(),
-          ])
+          const types = await referenceApi.getProjectTypes()
           setProjectTypes(types)
-          setProjectStatuses(statuses)
-          setPriorityLevels(priorities)
         } catch (error) {
           console.error('Failed to load reference data:', error)
         }
@@ -92,18 +88,31 @@ const EditProjectModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select 
-                value={editProject.priorityId || ''} 
-                onChange={(e) => setEditProject({ ...editProject, priorityId: e.target.value ? parseInt(e.target.value) : null })} 
+                value={editProject.priority || ''} 
+                onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— выберите приоритет —</option>
                 {priorityLevels.map(priority => (
-                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                  <option key={priority} value={priority}>{priority}</option>
                 ))}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+              <select 
+                value={editProject.status || ''} 
+                onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} 
+                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+              >
+                <option value="">— выберите статус —</option>
+                {projectStatuses.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Дата начала</label>
               <input 
@@ -113,28 +122,15 @@ const EditProjectModal = ({
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
               />
             </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Дата окончания</label>
-              <input 
-                type="date" 
-                value={editProject.endDate} 
-                onChange={(e) => setEditProject({ ...editProject, endDate: e.target.value })} 
-                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
-              />
-            </div>
           </div>
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">Статус</label>
-            <select 
-              value={editProject.statusId || ''} 
-              onChange={(e) => setEditProject({ ...editProject, statusId: e.target.value ? parseInt(e.target.value) : null })} 
-              className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
-            >
-              <option value="">— выберите статус —</option>
-              {projectStatuses.map(status => (
-                <option key={status.id} value={status.id}>{status.name}</option>
-              ))}
-            </select>
+            <label className="text-sm text-gray-400 mb-2 block">Дата окончания</label>
+            <input 
+              type="date" 
+              value={editProject.endDate} 
+              onChange={(e) => setEditProject({ ...editProject, endDate: e.target.value })} 
+              className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary" 
+            />
           </div>
           <div>
             <label className="text-sm text-gray-400 mb-2 block">Описание</label>

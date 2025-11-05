@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Ticket, MessageCircle } from 'lucide-react'
 import { priorityColors, statusColorsTickets, statusColors } from '../config/colors'
+import { formatDate } from '../utils/dateUtils'
 
 const TicketDetailModal = ({ 
   ticket, 
@@ -90,13 +91,13 @@ const TicketDetailModal = ({
             <div>
               <label className="text-sm text-gray-400">Создан</label>
               <div className="mt-1 text-white">
-                {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                {formatDate(ticket.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </div>
             </div>
             <div>
               <label className="text-sm text-gray-400">Изменено</label>
               <div className="mt-1 text-white">
-                {ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                {formatDate(ticket.updatedAt, { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </div>
             </div>
           </div>

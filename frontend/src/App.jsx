@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Shield, Ticket, Building2, ChevronDown, Server, Users, BarChart } from 'lucide-react'
+import { Shield, Ticket, Building2, ChevronDown, Server, Users, BarChart, BookOpen } from 'lucide-react'
 import VulnerabilitiesPage from './pages/VulnerabilitiesPage'
 import TicketsPage from './pages/TicketsPage'
 import AssetsPage from './pages/AssetsPage'
 import ClientsPage from './pages/ClientsPage'
 import ReportsPage from './pages/ReportsPage'
+import ReferencesPage from './pages/ReferencesPage'
 import { clientsApi, authApi } from './services/api'
 import { transformClient, transformWorker } from './utils/dataTransform'
 import UserProfileMenu from './components/UserProfileMenu'
@@ -158,6 +159,17 @@ function App() {
                   <BarChart className="w-4 h-4" />
                   Отчёты
                 </button>
+                <button
+                  onClick={() => setActivePage('references')}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                    activePage === 'references'
+                      ? 'bg-dark-purple-primary text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-dark-card'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Справочники
+                </button>
               </div>
             </div>
             
@@ -241,6 +253,7 @@ function App() {
         {activePage === 'assets' && <AssetsPage selectedClient={selectedClient} />}
         {activePage === 'clients' && <ClientsPage />}
         {activePage === 'reports' && <ReportsPage selectedClient={selectedClient} />}
+        {activePage === 'references' && <ReferencesPage />}
       </div>
     </div>
   )

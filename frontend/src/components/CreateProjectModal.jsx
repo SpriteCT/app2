@@ -9,40 +9,37 @@ const CreateProjectModal = ({
   clientId 
 }) => {
   const [projectTypes, setProjectTypes] = useState([])
-  const [projectStatuses, setProjectStatuses] = useState([])
-  const [priorityLevels, setPriorityLevels] = useState([])
   const [newProject, setNewProject] = useState({
     name: '',
     typeId: null,
-    priorityId: null,
+    priority: 'High',
+    status: 'Active',
     description: '',
     startDate: '',
     endDate: '',
     team: [],
   })
+  
+  // Available project statuses
+  const projectStatuses = ['Active', 'Planning', 'On Hold', 'Completed', 'Cancelled']
+  
+  // Available priority levels
+  const priorityLevels = ['Critical', 'High', 'Medium', 'Low']
 
   useEffect(() => {
     if (isOpen) {
       const loadReferenceData = async () => {
         try {
-          const [types, statuses, priorities] = await Promise.all([
-            referenceApi.getProjectTypes(),
-            referenceApi.getProjectStatuses(),
-            referenceApi.getPriorityLevels(),
-          ])
+          const types = await referenceApi.getProjectTypes()
           setProjectTypes(types)
-          setProjectStatuses(statuses)
-          setPriorityLevels(priorities)
           
           // Set defaults
           const defaultType = types.find(t => t.name === 'Vulnerability Scanning')
-          const defaultPriority = priorities.find(p => p.name === 'High')
-          const defaultStatus = statuses.find(s => s.name === 'Active')
           setNewProject(prev => ({
             ...prev,
             typeId: defaultType?.id || (types[0]?.id),
-            priorityId: defaultPriority?.id || (priorities[0]?.id),
-            statusId: defaultStatus?.id || (statuses[0]?.id),
+            priority: 'High',
+            status: 'Active',
           }))
         } catch (error) {
           console.error('Failed to load reference data:', error)
@@ -63,7 +60,7 @@ const CreateProjectModal = ({
       alert('Пожалуйста, укажите название проекта')
       return
     }
-    if (!newProject.typeId || !newProject.priorityId || !newProject.statusId) {
+    if (!newProject.typeId || !newProject.priority || !newProject.status) {
       alert('Пожалуйста, выберите тип проекта, приоритет и статус')
       return
     }
@@ -93,7 +90,8 @@ const CreateProjectModal = ({
     setNewProject({
       name: '',
       typeId: null,
-      priorityId: null,
+      priority: 'High',
+      status: 'Active',
       description: '',
       startDate: '',
       endDate: '',
@@ -146,19 +144,30 @@ const CreateProjectModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select
-                value={newProject.priorityId || ''}
-                onChange={(e) => setNewProject({...newProject, priorityId: e.target.value ? parseInt(e.target.value) : null})}
+                value={newProject.priority || ''}
+                onChange={(e) => setNewProject({...newProject, priority: e.target.value})}
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
-                <option value="">— выберите приоритет —</option>
                 {priorityLevels.map(priority => (
-                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                  <option key={priority} value={priority}>{priority}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+              <select
+                value={newProject.status || ''}
+                onChange={(e) => setNewProject({...newProject, status: e.target.value})}
+                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+              >
+                {projectStatuses.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Дата начала</label>
               <input

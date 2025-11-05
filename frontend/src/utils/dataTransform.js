@@ -1,4 +1,5 @@
 // Utility functions to transform data between backend (snake_case) and frontend (camelCase)
+import { formatDate, formatDateTime } from './dateUtils'
 
 // Transform client from backend to frontend format
 export const transformClient = (backendClient) => {
@@ -78,10 +79,8 @@ export const transformProject = (backendProject) => {
     description: backendProject.description,
     typeId: backendProject.type_id,
     type: backendProject.type?.name || '',
-    statusId: backendProject.status_id,
-    status: backendProject.status?.name || '',
-    priorityId: backendProject.priority_id,
-    priority: backendProject.priority?.name || '',
+    status: backendProject.status || '',
+    priority: backendProject.priority || '',
     startDate: backendProject.start_date,
     endDate: backendProject.end_date,
     team: (backendProject.team_members || []).map(member => member.user?.client_profile?.contact_name || member.user?.worker_profile?.full_name || ''),
@@ -111,8 +110,8 @@ export const transformProjectToBackend = (frontendProject) => {
     name: frontendProject.name,
     description: frontendProject.description,
     type_id: frontendProject.typeId || frontendProject.type_id,
-    status_id: frontendProject.statusId || frontendProject.status_id,
-    priority_id: frontendProject.priorityId || frontendProject.priority_id,
+    status: frontendProject.status || frontendProject.statusId,
+    priority: frontendProject.priority || frontendProject.priorityId,
     start_date: startDate,
     end_date: endDate,
     team_member_ids: frontendProject.teamMemberIds || [],
@@ -131,10 +130,8 @@ export const transformAsset = (backendAsset) => {
     typeName: backendAsset.type?.name || '',
     ipAddress: backendAsset.ip_address,
     operatingSystem: backendAsset.operating_system,
-    statusId: backendAsset.status_id,
-    status: backendAsset.status?.name || '',
-    criticalityId: backendAsset.criticality_id,
-    criticality: backendAsset.criticality?.name || '',
+    status: backendAsset.status || '',
+    criticality: backendAsset.criticality || '',
     lastScan: backendAsset.last_scan,
   }
 }
@@ -147,8 +144,8 @@ export const transformAssetToBackend = (frontendAsset) => {
     type_id: frontendAsset.typeId,
     ip_address: frontendAsset.ipAddress,
     operating_system: frontendAsset.operatingSystem,
-    status_id: frontendAsset.statusId || frontendAsset.status_id,
-    criticality_id: frontendAsset.criticalityId || frontendAsset.criticality_id,
+    status: frontendAsset.status || frontendAsset.statusId,
+    criticality: frontendAsset.criticality || frontendAsset.criticalityId,
     last_scan: frontendAsset.lastScan || null,
   }
 }
@@ -168,10 +165,8 @@ export const transformVulnerability = (backendVuln) => {
     description: backendVuln.description,
     scannerId: backendVuln.scanner_id,
     scannerName: backendVuln.scanner?.name || '',
-    statusId: backendVuln.status_id,
-    status: backendVuln.status?.name || '',
-    criticalityId: backendVuln.criticality_id,
-    criticality: backendVuln.criticality?.name || '',
+    status: backendVuln.status || '',
+    criticality: backendVuln.criticality || '',
     cvss: backendVuln.cvss ? parseFloat(backendVuln.cvss) : null,
     cve: backendVuln.cve,
     discovered: backendVuln.discovered,
@@ -197,8 +192,8 @@ export const transformVulnerabilityToBackend = (frontendVuln) => {
   const data = {
     client_id: typeof frontendVuln.clientId === 'string' ? parseInt(frontendVuln.clientId) : frontendVuln.clientId,
     title: frontendVuln.title || '',
-    status_id: frontendVuln.statusId || frontendVuln.status_id,
-    criticality_id: frontendVuln.criticalityId || frontendVuln.criticality_id,
+    status: frontendVuln.status || frontendVuln.statusId,
+    criticality: frontendVuln.criticality || frontendVuln.criticalityId,
   }
   
   // Optional fields
@@ -258,10 +253,8 @@ export const transformTicket = (backendTicket) => {
     assigneeName: backendTicket.assignee?.client_profile?.contact_name || backendTicket.assignee?.worker_profile?.full_name || '',
     reporterId: backendTicket.reporter_id,
     reporterName: backendTicket.reporter?.client_profile?.contact_name || backendTicket.reporter?.worker_profile?.full_name || '',
-    priorityId: backendTicket.priority_id,
-    priority: backendTicket.priority?.name || '',
-    statusId: backendTicket.status_id,
-    status: backendTicket.status?.name || '',
+    priority: backendTicket.priority || '',
+    status: backendTicket.status || '',
     createdAt: backendTicket.created_at,
     updatedAt: backendTicket.updated_at,
     dueDate: backendTicket.due_date,
@@ -271,7 +264,10 @@ export const transformTicket = (backendTicket) => {
       id: msg.id,
       authorId: msg.author_id,
       author: msg.author?.client_profile?.contact_name || msg.author?.worker_profile?.full_name || 'Система',
-      timestamp: msg.timestamp ? new Date(msg.timestamp).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
+      timestamp: msg.timestamp ? (() => {
+        const d = new Date(msg.timestamp)
+        return isNaN(d.getTime()) ? '' : d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      })() : '',
       message: msg.message,
     })),
   }
@@ -285,8 +281,8 @@ export const transformTicketToBackend = (frontendTicket) => {
     description: frontendTicket.description,
     assignee_id: frontendTicket.assigneeId || null,
     reporter_id: frontendTicket.reporterId || null,
-    priority_id: frontendTicket.priorityId || frontendTicket.priority_id,
-    status_id: frontendTicket.statusId || frontendTicket.status_id,
+    priority: frontendTicket.priority || frontendTicket.priorityId,
+    status: frontendTicket.status || frontendTicket.statusId,
     due_date: frontendTicket.dueDate || null,
     resolution: frontendTicket.resolution || null,
     vulnerability_ids: frontendTicket.vulnerabilityIds || [],

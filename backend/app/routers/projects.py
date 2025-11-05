@@ -27,8 +27,6 @@ def get_projects(
     """Get all projects, optionally filtered by client"""
     query = db.query(Project).options(
         joinedload(Project.type),
-        joinedload(Project.status),
-        joinedload(Project.priority),
         joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     )
     if client_id:
@@ -42,8 +40,6 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
     """Get a specific project by ID"""
     project = db.query(Project).options(
         joinedload(Project.type),
-        joinedload(Project.status),
-        joinedload(Project.priority),
         joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     ).filter(Project.id == project_id).first()
     if not project:
@@ -84,8 +80,6 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
     # Загружаем связанные данные для возврата
     db_project = db.query(Project).options(
         joinedload(Project.type),
-        joinedload(Project.status),
-        joinedload(Project.priority),
         joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     ).filter(Project.id == db_project.id).first()
     return db_project
@@ -131,8 +125,6 @@ def update_project(
     # Загружаем связанные данные для возврата
     db_project = db.query(Project).options(
         joinedload(Project.type),
-        joinedload(Project.status),
-        joinedload(Project.priority),
         joinedload(Project.team_members).joinedload(ProjectTeamMember.user)
     ).filter(Project.id == db_project.id).first()
     return db_project

@@ -11,6 +11,7 @@ import { criticalityColors, statusColors } from '../config/colors'
 import { priorityColors, statusColorsTickets } from '../config/colors'
 import { assetsApi, vulnerabilitiesApi, ticketsApi, clientsApi, referenceApi } from '../services/api'
 import { transformAsset, transformAssetToBackend, transformVulnerability, transformTicket } from '../utils/dataTransform'
+import { formatDate } from '../utils/dateUtils'
 import VulnerabilityDetailModal from '../components/VulnerabilityDetailModal'
 import TicketDetailModal from '../components/TicketDetailModal'
 import AddAssetModal from '../components/AddAssetModal'
@@ -307,7 +308,7 @@ const AssetsPage = ({ selectedClient }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {asset.lastScan ? new Date(asset.lastScan).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                    {formatDate(asset.lastScan, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">

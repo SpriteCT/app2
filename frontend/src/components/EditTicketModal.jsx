@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { ticketsApi, referenceApi } from '../services/api'
 import { transformTicket, transformTicketToBackend } from '../utils/dataTransform'
+import { formatDate } from '../utils/dateUtils'
 
 const EditTicketModal = ({
   isOpen,
@@ -10,26 +11,10 @@ const EditTicketModal = ({
   workers = []
 }) => {
   const [editTicket, setEditTicket] = useState(null)
-  const [ticketStatuses, setTicketStatuses] = useState([])
-  const [priorityLevels, setPriorityLevels] = useState([])
-
-  useEffect(() => {
-    if (isOpen) {
-      const loadReferenceData = async () => {
-        try {
-          const [statuses, priorities] = await Promise.all([
-            referenceApi.getTicketStatuses(),
-            referenceApi.getPriorityLevels(),
-          ])
-          setTicketStatuses(statuses)
-          setPriorityLevels(priorities)
-        } catch (error) {
-          console.error('Failed to load reference data:', error)
-        }
-      }
-      loadReferenceData()
-    }
-  }, [isOpen])
+  
+  // ENUM values
+  const ticketStatuses = ['Open', 'In Progress', 'Closed']
+  const priorityLevels = ['Critical', 'High', 'Medium', 'Low']
 
   useEffect(() => {
     if (ticket) {
@@ -88,26 +73,26 @@ const EditTicketModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select 
-                value={editTicket.priorityId || ''} 
-                onChange={(e) => setEditTicket({ ...editTicket, priorityId: e.target.value ? parseInt(e.target.value) : null })} 
+                value={editTicket.priority || ''} 
+                onChange={(e) => setEditTicket({ ...editTicket, priority: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— выберите приоритет —</option>
                 {priorityLevels.map(priority => (
-                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                  <option key={priority} value={priority}>{priority}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Статус</label>
               <select 
-                value={editTicket.statusId || ''} 
-                onChange={(e) => setEditTicket({ ...editTicket, statusId: e.target.value ? parseInt(e.target.value) : null })} 
+                value={editTicket.status || ''} 
+                onChange={(e) => setEditTicket({ ...editTicket, status: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— выберите статус —</option>
                 {ticketStatuses.map(status => (
-                  <option key={status.id} value={status.id}>{status.name}</option>
+                  <option key={status} value={status}>{status}</option>
                 ))}
               </select>
             </div>
@@ -151,13 +136,13 @@ const EditTicketModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Создан</label>
               <div className="px-4 py-2 bg-dark-card border border-dark-border text-gray-400 rounded-lg">
-                {editTicket.createdAt ? new Date(editTicket.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                {formatDate(editTicket.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </div>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Изменено</label>
               <div className="px-4 py-2 bg-dark-card border border-dark-border text-gray-400 rounded-lg">
-                {editTicket.updatedAt ? new Date(editTicket.updatedAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                {formatDate(editTicket.updatedAt, { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </div>
             </div>
           </div>

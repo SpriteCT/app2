@@ -27,9 +27,7 @@ def get_assets(
 ):
     """Get all assets, optionally filtered by client or type"""
     query = db.query(Asset).filter(Asset.is_deleted == False).options(
-        joinedload(Asset.type),
-        joinedload(Asset.status),
-        joinedload(Asset.criticality)
+        joinedload(Asset.type)
     )
     if client_id:
         query = query.filter(Asset.client_id == client_id)
@@ -43,9 +41,7 @@ def get_assets(
 def get_asset(asset_id: int, db: Session = Depends(get_db)):
     """Get a specific asset by ID"""
     asset = db.query(Asset).filter(Asset.id == asset_id, Asset.is_deleted == False).options(
-        joinedload(Asset.type),
-        joinedload(Asset.status),
-        joinedload(Asset.criticality)
+        joinedload(Asset.type)
     ).first()
     if not asset:
         raise HTTPException(

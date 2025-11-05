@@ -102,6 +102,7 @@ class AssetTypeUpdate(AssetTypeBase):
 
 class AssetType(AssetTypeBase, TimestampMixin):
     id: int
+    is_deleted: bool = False
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -121,6 +122,7 @@ class ScannerUpdate(ScannerBase):
 
 class Scanner(ScannerBase, TimestampMixin):
     id: int
+    is_deleted: bool = False
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -132,52 +134,16 @@ class ProjectTypeBase(BaseModel):
 
 class ProjectType(ProjectTypeBase, TimestampMixin):
     id: int
+    is_deleted: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProjectStatusBase(BaseModel):
-    name: str
-
-
-class ProjectStatus(ProjectStatusBase, TimestampMixin):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
-
-
-class PriorityLevelBase(BaseModel):
-    name: str
-
-
-class PriorityLevel(PriorityLevelBase, TimestampMixin):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
-
-
-class AssetStatusBase(BaseModel):
-    name: str
-
-
-class AssetStatus(AssetStatusBase, TimestampMixin):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
-
-
-class VulnStatusBase(BaseModel):
-    name: str
-
-
-class VulnStatus(VulnStatusBase, TimestampMixin):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
-
-
-class TicketStatusBase(BaseModel):
-    name: str
-
-
-class TicketStatus(TicketStatusBase, TimestampMixin):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
+# ENUM types for statuses and priorities (now using strings directly)
+# PriorityType: 'Critical', 'High', 'Medium', 'Low'
+# ProjectStatus: 'Active', 'Planning', 'On Hold', 'Completed', 'Cancelled'
+# AssetStatus: 'В эксплуатации', 'Недоступен', 'В обслуживании', 'Выведен из эксплуатации'
+# VulnStatus: 'Open', 'In Progress', 'Closed'
+# TicketStatus: 'Open', 'In Progress', 'Closed'
 
 
 # Client Contact schemas
@@ -260,8 +226,8 @@ class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
     type_id: int
-    status_id: int
-    priority_id: int
+    status: str  # 'Active', 'Planning', 'On Hold', 'Completed', 'Cancelled'
+    priority: str  # 'Critical', 'High', 'Medium', 'Low'
     start_date: date
     end_date: date
 
@@ -275,8 +241,8 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     type_id: Optional[int] = None
-    status_id: Optional[int] = None
-    priority_id: Optional[int] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     team_member_ids: Optional[List[int]] = None
@@ -287,8 +253,6 @@ class Project(ProjectBase, TimestampMixin):
     client_id: int
     client: Optional[Client] = None
     type: Optional[ProjectType] = None
-    status: Optional[ProjectStatus] = None
-    priority: Optional[PriorityLevel] = None
     team_members: List[ProjectTeamMember] = []
     
     model_config = ConfigDict(from_attributes=True)
@@ -300,8 +264,8 @@ class AssetBase(BaseModel):
     type_id: int
     ip_address: Optional[str] = None
     operating_system: Optional[str] = None
-    status_id: int
-    criticality_id: int
+    status: str  # 'В эксплуатации', 'Недоступен', 'В обслуживании', 'Выведен из эксплуатации'
+    criticality: str  # 'Critical', 'High', 'Medium', 'Low'
     last_scan: Optional[datetime] = None
 
 
@@ -314,8 +278,8 @@ class AssetUpdate(BaseModel):
     type_id: Optional[int] = None
     ip_address: Optional[str] = None
     operating_system: Optional[str] = None
-    status_id: Optional[int] = None
-    criticality_id: Optional[int] = None
+    status: Optional[str] = None
+    criticality: Optional[str] = None
     last_scan: Optional[datetime] = None
 
 
@@ -325,8 +289,6 @@ class Asset(AssetBase, TimestampMixin):
     is_deleted: bool = False
     client: Optional[Client] = None
     type: Optional[AssetType] = None
-    status: Optional[AssetStatus] = None
-    criticality: Optional[PriorityLevel] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -337,8 +299,8 @@ class VulnerabilityBase(BaseModel):
     description: Optional[str] = None
     asset_id: Optional[int] = None
     scanner_id: Optional[int] = None
-    status_id: int
-    criticality_id: int
+    status: str  # 'Open', 'In Progress', 'Closed'
+    criticality: str  # 'Critical', 'High', 'Medium', 'Low'
     cvss: Optional[float] = Field(None, ge=0, le=10)
     cve: Optional[str] = None
     discovered: Optional[date] = None
@@ -354,8 +316,8 @@ class VulnerabilityUpdate(BaseModel):
     description: Optional[str] = None
     asset_id: Optional[int] = None
     scanner_id: Optional[int] = None
-    status_id: Optional[int] = None
-    criticality_id: Optional[int] = None
+    status: Optional[str] = None
+    criticality: Optional[str] = None
     cvss: Optional[float] = Field(None, ge=0, le=10)
     cve: Optional[str] = None
     discovered: Optional[date] = None
@@ -370,8 +332,6 @@ class Vulnerability(VulnerabilityBase, TimestampMixin):
     client: Optional[Client] = None
     asset: Optional[Asset] = None
     scanner: Optional[Scanner] = None
-    status: Optional[VulnStatus] = None
-    criticality: Optional[PriorityLevel] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -399,8 +359,8 @@ class TicketMessage(TicketMessageBase, TimestampMixin):
 class TicketBase(BaseModel):
     title: str
     description: Optional[str] = None
-    priority_id: int
-    status_id: int
+    priority: str  # 'Critical', 'High', 'Medium', 'Low'
+    status: str  # 'Open', 'In Progress', 'Closed'
     assignee_id: Optional[int] = None
     reporter_id: Optional[int] = None
     due_date: Optional[date] = None
@@ -415,8 +375,8 @@ class TicketCreate(TicketBase):
 class TicketUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    priority_id: Optional[int] = None
-    status_id: Optional[int] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
     assignee_id: Optional[int] = None
     reporter_id: Optional[int] = None
     due_date: Optional[date] = None
@@ -434,8 +394,6 @@ class Ticket(TicketBase, TimestampMixin):
     vulnerabilities: List[Vulnerability] = []
     assignee: Optional[User] = None
     reporter: Optional[User] = None
-    priority: Optional[PriorityLevel] = None
-    status: Optional[TicketStatus] = None
     client: Optional[Client] = None
     messages: List[TicketMessage] = []
     

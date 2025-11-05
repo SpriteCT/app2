@@ -16,8 +16,8 @@ const AddAssetModal = ({
     typeId: '',
     ipAddress: '',
     operatingSystem: '',
-    statusId: null,
-    criticalityId: null,
+    status: 'В эксплуатации',
+    criticality: 'High',
     clientId: ''
   })
 
@@ -25,20 +25,17 @@ const AddAssetModal = ({
     if (isOpen) {
       const loadReferenceData = async () => {
         try {
-          const [statuses, priorities] = await Promise.all([
-            referenceApi.getAssetStatuses(),
-            referenceApi.getPriorityLevels(),
-          ])
-          setAssetStatuses(statuses)
-          setPriorityLevels(priorities)
+          // ENUM values (no API call needed)
+          const assetStatuses = ['В эксплуатации', 'Недоступен', 'В обслуживании', 'Выведен из эксплуатации']
+          const priorityLevels = ['Critical', 'High', 'Medium', 'Low']
+          setAssetStatuses(assetStatuses)
+          setPriorityLevels(priorityLevels)
           
           // Set defaults
-          const defaultStatus = statuses.find(s => s.name === 'В эксплуатации')
-          const defaultCriticality = priorities.find(p => p.name === 'High')
           setNewAsset(prev => ({
             ...prev,
-            statusId: defaultStatus?.id || (statuses[0]?.id),
-            criticalityId: defaultCriticality?.id || (priorities[0]?.id),
+            status: 'В эксплуатации',
+            criticality: 'High',
           }))
         } catch (error) {
           console.error('Failed to load reference data:', error)
@@ -53,7 +50,7 @@ const AddAssetModal = ({
       alert('Заполните все обязательные поля: имя, тип и клиент')
       return
     }
-    if (!newAsset.statusId || !newAsset.criticalityId) {
+    if (!newAsset.status || !newAsset.criticality) {
       alert('Пожалуйста, выберите статус и критичность')
       return
     }
@@ -69,8 +66,8 @@ const AddAssetModal = ({
         typeId: '',
         ipAddress: '',
         operatingSystem: '',
-        statusId: null,
-        criticalityId: null,
+        status: 'В эксплуатации',
+        criticality: 'High',
         clientId: ''
       })
     } catch (error) {
@@ -136,26 +133,26 @@ const AddAssetModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Критичность</label>
               <select 
-                value={newAsset.criticalityId || ''} 
-                onChange={(e) => setNewAsset({ ...newAsset, criticalityId: e.target.value ? parseInt(e.target.value) : null })} 
+                value={newAsset.criticality || ''} 
+                onChange={(e) => setNewAsset({ ...newAsset, criticality: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— выберите критичность —</option>
                 {priorityLevels.map(priority => (
-                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                  <option key={priority} value={priority}>{priority}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Статус</label>
               <select 
-                value={newAsset.statusId || ''} 
-                onChange={(e) => setNewAsset({ ...newAsset, statusId: e.target.value ? parseInt(e.target.value) : null })} 
+                value={newAsset.status || ''} 
+                onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })} 
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— выберите статус —</option>
                 {assetStatuses.map(status => (
-                  <option key={status.id} value={status.id}>{status.name}</option>
+                  <option key={status} value={status}>{status}</option>
                 ))}
               </select>
             </div>

@@ -1,5 +1,5 @@
 """
-API routes for reference data (asset types, scanners, and reference tables replacing ENUMs)
+API routes for reference data (asset types, scanners, project types)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,9 +8,7 @@ from typing import List
 from app.database import get_db
 from app.models import (
     AssetType, Scanner,
-    ProjectType, ProjectStatus,
-    PriorityLevel, AssetStatus,
-    VulnStatus, TicketStatus
+    ProjectType
 )
 from app.schemas import (
     AssetType as AssetTypeSchema,
@@ -20,11 +18,7 @@ from app.schemas import (
     ScannerCreate,
     ScannerUpdate,
     ProjectType as ProjectTypeSchema,
-    ProjectStatus as ProjectStatusSchema,
-    PriorityLevel as PriorityLevelSchema,
-    AssetStatus as AssetStatusSchema,
-    VulnStatus as VulnStatusSchema,
-    TicketStatus as TicketStatusSchema
+    ProjectTypeBase
 )
 
 router = APIRouter(prefix="/reference", tags=["reference"])
@@ -37,15 +31,15 @@ def get_asset_types(
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Get all asset types"""
-    asset_types = db.query(AssetType).offset(skip).limit(limit).all()
+    """Get all asset types (excluding deleted ones)"""
+    asset_types = db.query(AssetType).filter(AssetType.is_deleted == False).offset(skip).limit(limit).all()
     return asset_types
 
 
 @router.get("/asset-types/{asset_type_id}", response_model=AssetTypeSchema)
 def get_asset_type(asset_type_id: int, db: Session = Depends(get_db)):
     """Get a specific asset type by ID"""
-    asset_type = db.query(AssetType).filter(AssetType.id == asset_type_id).first()
+    asset_type = db.query(AssetType).filter(AssetType.id == asset_type_id, AssetType.is_deleted == False).first()
     if not asset_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -71,7 +65,7 @@ def update_asset_type(
     db: Session = Depends(get_db)
 ):
     """Update an asset type"""
-    db_asset_type = db.query(AssetType).filter(AssetType.id == asset_type_id).first()
+    db_asset_type = db.query(AssetType).filter(AssetType.id == asset_type_id, AssetType.is_deleted == False).first()
     if not db_asset_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -89,15 +83,15 @@ def update_asset_type(
 
 @router.delete("/asset-types/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset_type(asset_type_id: int, db: Session = Depends(get_db)):
-    """Delete an asset type"""
-    db_asset_type = db.query(AssetType).filter(AssetType.id == asset_type_id).first()
+    """Soft delete an asset type (mark as deleted)"""
+    db_asset_type = db.query(AssetType).filter(AssetType.id == asset_type_id, AssetType.is_deleted == False).first()
     if not db_asset_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Asset type not found"
         )
     
-    db.delete(db_asset_type)
+    db_asset_type.is_deleted = True
     db.commit()
     return None
 
@@ -109,15 +103,15 @@ def get_scanners(
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Get all scanners"""
-    scanners = db.query(Scanner).offset(skip).limit(limit).all()
+    """Get all scanners (excluding deleted ones)"""
+    scanners = db.query(Scanner).filter(Scanner.is_deleted == False).offset(skip).limit(limit).all()
     return scanners
 
 
 @router.get("/scanners/{scanner_id}", response_model=ScannerSchema)
 def get_scanner(scanner_id: int, db: Session = Depends(get_db)):
     """Get a specific scanner by ID"""
-    scanner = db.query(Scanner).filter(Scanner.id == scanner_id).first()
+    scanner = db.query(Scanner).filter(Scanner.id == scanner_id, Scanner.is_deleted == False).first()
     if not scanner:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -143,7 +137,7 @@ def update_scanner(
     db: Session = Depends(get_db)
 ):
     """Update a scanner"""
-    db_scanner = db.query(Scanner).filter(Scanner.id == scanner_id).first()
+    db_scanner = db.query(Scanner).filter(Scanner.id == scanner_id, Scanner.is_deleted == False).first()
     if not db_scanner:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -161,15 +155,15 @@ def update_scanner(
 
 @router.delete("/scanners/{scanner_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_scanner(scanner_id: int, db: Session = Depends(get_db)):
-    """Delete a scanner"""
-    db_scanner = db.query(Scanner).filter(Scanner.id == scanner_id).first()
+    """Soft delete a scanner (mark as deleted)"""
+    db_scanner = db.query(Scanner).filter(Scanner.id == scanner_id, Scanner.is_deleted == False).first()
     if not db_scanner:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Scanner not found"
         )
     
-    db.delete(db_scanner)
+    db_scanner.is_deleted = True
     db.commit()
     return None
 
@@ -181,67 +175,57 @@ def get_project_types(
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Get all project types"""
-    project_types = db.query(ProjectType).offset(skip).limit(limit).all()
+    """Get all project types (excluding deleted ones)"""
+    project_types = db.query(ProjectType).filter(ProjectType.is_deleted == False).offset(skip).limit(limit).all()
     return project_types
 
 
-# Project Statuses routes
-@router.get("/project-statuses", response_model=List[ProjectStatusSchema])
-def get_project_statuses(
-    skip: int = 0,
-    limit: int = 100,
+@router.post("/project-types", response_model=ProjectTypeSchema, status_code=status.HTTP_201_CREATED)
+def create_project_type(
+    project_type: ProjectTypeBase,
     db: Session = Depends(get_db)
 ):
-    """Get all project statuses"""
-    project_statuses = db.query(ProjectStatus).offset(skip).limit(limit).all()
-    return project_statuses
+    """Create a new project type"""
+    db_project_type = ProjectType(**project_type.model_dump())
+    db.add(db_project_type)
+    db.commit()
+    db.refresh(db_project_type)
+    return db_project_type
 
 
-# Priority Levels routes
-@router.get("/priority-levels", response_model=List[PriorityLevelSchema])
-def get_priority_levels(
-    skip: int = 0,
-    limit: int = 100,
+@router.put("/project-types/{project_type_id}", response_model=ProjectTypeSchema)
+def update_project_type(
+    project_type_id: int,
+    project_type_update: ProjectTypeBase,
     db: Session = Depends(get_db)
 ):
-    """Get all priority levels"""
-    priority_levels = db.query(PriorityLevel).offset(skip).limit(limit).all()
-    return priority_levels
+    """Update a project type"""
+    db_project_type = db.query(ProjectType).filter(ProjectType.id == project_type_id, ProjectType.is_deleted == False).first()
+    if not db_project_type:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project type not found"
+        )
+    
+    update_data = project_type_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_project_type, field, value)
+    
+    db.commit()
+    db.refresh(db_project_type)
+    return db_project_type
 
 
-# Asset Statuses routes
-@router.get("/asset-statuses", response_model=List[AssetStatusSchema])
-def get_asset_statuses(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """Get all asset statuses"""
-    asset_statuses = db.query(AssetStatus).offset(skip).limit(limit).all()
-    return asset_statuses
-
-
-# Vulnerability Statuses routes
-@router.get("/vuln-statuses", response_model=List[VulnStatusSchema])
-def get_vuln_statuses(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """Get all vulnerability statuses"""
-    vuln_statuses = db.query(VulnStatus).offset(skip).limit(limit).all()
-    return vuln_statuses
-
-
-# Ticket Statuses routes
-@router.get("/ticket-statuses", response_model=List[TicketStatusSchema])
-def get_ticket_statuses(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """Get all ticket statuses"""
-    ticket_statuses = db.query(TicketStatus).offset(skip).limit(limit).all()
-    return ticket_statuses
-
+@router.delete("/project-types/{project_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_type(project_type_id: int, db: Session = Depends(get_db)):
+    """Soft delete a project type (mark as deleted)"""
+    db_project_type = db.query(ProjectType).filter(ProjectType.id == project_type_id, ProjectType.is_deleted == False).first()
+    if not db_project_type:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project type not found"
+        )
+    
+    db_project_type.is_deleted = True
+    db.commit()
+    return None

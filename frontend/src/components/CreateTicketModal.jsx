@@ -16,11 +16,13 @@ const CreateTicketModal = ({
   initialClientId = null,
   initialVulnIds = []
 }) => {
-  const [priorityLevels, setPriorityLevels] = useState([])
-  const [ticketStatuses, setTicketStatuses] = useState([])
   const [autoTitle, setAutoTitle] = useState('')
-  const [createPriorityId, setCreatePriorityId] = useState(null)
-  const [createStatusId, setCreateStatusId] = useState(null)
+  const [createPriority, setCreatePriority] = useState('High')
+  const [createStatus, setCreateStatus] = useState('Open')
+  
+  // ENUM values
+  const priorityLevels = ['Critical', 'High', 'Medium', 'Low']
+  const ticketStatuses = ['Open', 'In Progress', 'Closed']
   const [createDescription, setCreateDescription] = useState('')
   const [selectedAssigneeId, setSelectedAssigneeId] = useState(null)
   const [vulnSearchTerm, setVulnSearchTerm] = useState('')
@@ -30,25 +32,9 @@ const CreateTicketModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      const loadReferenceData = async () => {
-        try {
-          const [priorities, statuses] = await Promise.all([
-            referenceApi.getPriorityLevels(),
-            referenceApi.getTicketStatuses(),
-          ])
-          setPriorityLevels(priorities)
-          setTicketStatuses(statuses)
-          
-          // Set defaults
-          const defaultPriority = priorities.find(p => p.name === 'High')
-          const defaultStatus = statuses.find(s => s.name === 'Open')
-          setCreatePriorityId(defaultPriority?.id || (priorities[0]?.id))
-          setCreateStatusId(defaultStatus?.id || (statuses[0]?.id))
-        } catch (error) {
-          console.error('Failed to load reference data:', error)
-        }
-      }
-      loadReferenceData()
+      // Set defaults
+      setCreatePriority('High')
+      setCreateStatus('Open')
     }
   }, [isOpen])
 
@@ -132,7 +118,7 @@ const CreateTicketModal = ({
 
   const handleCreate = async () => {
     if (!allowedClientForTicket || (selectedVulns.length === 0 && !ticketFromVuln)) return
-    if (!createPriorityId || !createStatusId) {
+    if (!createPriority || !createStatus) {
       alert('Пожалуйста, выберите приоритет и статус')
       return
     }
@@ -142,8 +128,8 @@ const CreateTicketModal = ({
         clientId: parseInt(allowedClientForTicket),
         title: autoTitle || recomputeAutoTitle() || `Тикет для клиента: ${allowedClientName}`,
         description: createDescription || (ticketFromVuln ? `Требуется устранить уязвимость ${ticketFromVuln.displayId || ticketFromVuln.id}: ${ticketFromVuln.title}` : ''),
-        priorityId: createPriorityId,
-        statusId: createStatusId,
+        priority: createPriority,
+        status: createStatus,
         assigneeId: selectedAssigneeId || null,
         reporterId: workers && workers.length > 0 ? workers[0].id : null,
         dueDate: null,
@@ -161,10 +147,8 @@ const CreateTicketModal = ({
       // Reset form
       setAutoTitle('')
       setCreateDescription('')
-      const defaultPriority = priorityLevels.find(p => p.name === 'High')
-      const defaultStatus = ticketStatuses.find(s => s.name === 'Open')
-      setCreatePriorityId(defaultPriority?.id || (priorityLevels[0]?.id))
-      setCreateStatusId(defaultStatus?.id || (ticketStatuses[0]?.id))
+      setCreatePriority('High')
+      setCreateStatus('Open')
       setSelectedAssigneeId(null)
       setSelectedVulns(initialVulnIds)
       setVulnSearchTerm('')
@@ -181,10 +165,8 @@ const CreateTicketModal = ({
   const handleClose = () => {
     setAutoTitle('')
     setCreateDescription('')
-    const defaultPriority = priorityLevels.find(p => p.name === 'High')
-    const defaultStatus = ticketStatuses.find(s => s.name === 'Open')
-    setCreatePriorityId(defaultPriority?.id || (priorityLevels[0]?.id))
-    setCreateStatusId(defaultStatus?.id || (ticketStatuses[0]?.id))
+    setCreatePriority('High')
+    setCreateStatus('Open')
     setSelectedAssigneeId(null)
     setSelectedVulns(initialVulnIds)
     setVulnSearchTerm('')
@@ -228,16 +210,32 @@ const CreateTicketModal = ({
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Приоритет</label>
               <select
-                value={createPriorityId || ''}
-                onChange={(e) => setCreatePriorityId(e.target.value ? parseInt(e.target.value) : null)}
+                value={createPriority || ''}
+                onChange={(e) => setCreatePriority(e.target.value)}
                 className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
               >
                 <option value="">— выберите приоритет —</option>
                 {priorityLevels.map(priority => (
-                  <option key={priority.id} value={priority.id}>{priority.name}</option>
+                  <option key={priority} value={priority}>{priority}</option>
                 ))}
               </select>
             </div>
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Статус</label>
+              <select
+                value={createStatus || ''}
+                onChange={(e) => setCreateStatus(e.target.value)}
+                className="w-full px-4 py-2 bg-dark-card border border-dark-border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-purple-primary"
+              >
+                <option value="">— выберите статус —</option>
+                {ticketStatuses.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Клиент</label>
               <input

@@ -1,10 +1,11 @@
 """
 SQLAlchemy models for all database tables
 """
-from sqlalchemy import Column, String, Text, Date, DateTime, Numeric, SmallInteger, Boolean, ForeignKey, CheckConstraint, UniqueConstraint, Integer
+from sqlalchemy import Column, String, Text, Date, DateTime, Numeric, SmallInteger, Boolean, ForeignKey, CheckConstraint, UniqueConstraint, Integer, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
+import enum
 from app.database import Base
 
 
@@ -49,11 +50,47 @@ class WorkerProfile(Base):
     user = relationship("User", back_populates="worker_profile")
 
 
+# ENUM classes
+class PriorityType(str, enum.Enum):
+    CRITICAL = "Critical"
+    HIGH = "High"
+    MEDIUM = "Medium"
+    LOW = "Low"
+
+
+class ProjectStatus(str, enum.Enum):
+    ACTIVE = "Active"
+    PLANNING = "Planning"
+    ON_HOLD = "On Hold"
+    COMPLETED = "Completed"
+    CANCELLED = "Cancelled"
+
+
+class AssetStatusEnum(str, enum.Enum):
+    IN_USE = "В эксплуатации"
+    UNAVAILABLE = "Недоступен"
+    MAINTENANCE = "В обслуживании"
+    DECOMMISSIONED = "Выведен из эксплуатации"
+
+
+class VulnStatus(str, enum.Enum):
+    OPEN = "Open"
+    IN_PROGRESS = "In Progress"
+    CLOSED = "Closed"
+
+
+class TicketStatus(str, enum.Enum):
+    OPEN = "Open"
+    IN_PROGRESS = "In Progress"
+    CLOSED = "Closed"
+
+
 class AssetType(Base):
     __tablename__ = "asset_types"
     
     id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
+    name = Column(Text, nullable=False)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -62,62 +99,19 @@ class Scanner(Base):
     __tablename__ = "scanners"
     
     id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
+    name = Column(Text, nullable=False)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
-# Reference tables (replacing ENUMs)
+# Reference tables
 class ProjectType(Base):
     __tablename__ = "project_types"
     
     id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-
-
-class ProjectStatus(Base):
-    __tablename__ = "project_statuses"
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-
-
-class PriorityLevel(Base):
-    __tablename__ = "priority_levels"
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-
-
-class AssetStatus(Base):
-    __tablename__ = "asset_statuses"
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-
-
-class VulnStatus(Base):
-    __tablename__ = "vuln_statuses"
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-
-
-class TicketStatus(Base):
-    __tablename__ = "ticket_statuses"
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False, unique=True)
+    name = Column(Text, nullable=False)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -174,8 +168,8 @@ class Project(Base):
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     type_id = Column(Integer, ForeignKey("project_types.id", ondelete="RESTRICT"), nullable=False)
-    status_id = Column(Integer, ForeignKey("project_statuses.id", ondelete="RESTRICT"), nullable=False)
-    priority_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
+    status = Column(Enum(ProjectStatus, name="project_status", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    priority = Column(Enum(PriorityType, name="priority_type", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -184,8 +178,6 @@ class Project(Base):
     # Relationships
     client = relationship("Client", back_populates="projects")
     type = relationship("ProjectType")
-    status = relationship("ProjectStatus")
-    priority = relationship("PriorityLevel")
     team_members = relationship("ProjectTeamMember", back_populates="project", cascade="all, delete-orphan")
     gantt_tasks = relationship("GanttTask", back_populates="project", cascade="all, delete-orphan")
     
@@ -221,8 +213,8 @@ class Asset(Base):
     type_id = Column(Integer, ForeignKey("asset_types.id", ondelete="RESTRICT"), nullable=False)
     ip_address = Column(Text, nullable=True)
     operating_system = Column(Text, nullable=True)
-    status_id = Column(Integer, ForeignKey("asset_statuses.id", ondelete="RESTRICT"), nullable=False)
-    criticality_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
+    status = Column(Enum(AssetStatusEnum, name="asset_status", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    criticality = Column(Enum(PriorityType, name="priority_type", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
     last_scan = Column(DateTime(timezone=True), nullable=True)
     is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -231,8 +223,6 @@ class Asset(Base):
     # Relationships
     client = relationship("Client", back_populates="assets")
     type = relationship("AssetType")
-    status = relationship("AssetStatus")
-    criticality = relationship("PriorityLevel", foreign_keys=[criticality_id])
     vulnerabilities = relationship("Vulnerability", back_populates="asset")
 
 
@@ -246,8 +236,8 @@ class Vulnerability(Base):
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     scanner_id = Column(Integer, ForeignKey("scanners.id", ondelete="SET NULL"), nullable=True)
-    status_id = Column(Integer, ForeignKey("vuln_statuses.id", ondelete="RESTRICT"), nullable=False)
-    criticality_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
+    status = Column(Enum(VulnStatus, name="vuln_status", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    criticality = Column(Enum(PriorityType, name="priority_type", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
     cvss = Column(Numeric, nullable=True)
     cve = Column(Text, nullable=True)
     discovered = Column(Date, nullable=True)
@@ -260,8 +250,6 @@ class Vulnerability(Base):
     client = relationship("Client", back_populates="vulnerabilities")
     asset = relationship("Asset", back_populates="vulnerabilities")
     scanner = relationship("Scanner")
-    status = relationship("VulnStatus")
-    criticality = relationship("PriorityLevel", foreign_keys=[criticality_id])
     ticket_vulnerabilities = relationship("TicketVulnerability", back_populates="vulnerability")
     
     __table_args__ = (
@@ -279,8 +267,8 @@ class Ticket(Base):
     description = Column(Text, nullable=True)
     assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     reporter_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    priority_id = Column(Integer, ForeignKey("priority_levels.id", ondelete="RESTRICT"), nullable=False)
-    status_id = Column(Integer, ForeignKey("ticket_statuses.id", ondelete="RESTRICT"), nullable=False)
+    priority = Column(Enum(PriorityType, name="priority_type", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    status = Column(Enum(TicketStatus, name="ticket_status", create_constraint=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
     is_deleted = Column(Boolean, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -291,8 +279,6 @@ class Ticket(Base):
     client = relationship("Client", back_populates="tickets")
     assignee = relationship("User", foreign_keys=[assignee_id])
     reporter = relationship("User", foreign_keys=[reporter_id])
-    priority = relationship("PriorityLevel", foreign_keys=[priority_id])
-    status = relationship("TicketStatus")
     messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan")
     ticket_vulnerabilities = relationship("TicketVulnerability", back_populates="ticket", cascade="all, delete-orphan")
     
